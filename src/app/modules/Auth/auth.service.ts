@@ -213,6 +213,7 @@ const loginUser = async (payload: {
     return {
       email: userData.email,
       isVerified: userData.isVerified,
+        project: "alesuke"
     };
   } else {
     const accessToken = jwtHelpers.generateToken(
@@ -253,6 +254,7 @@ const loginUser = async (payload: {
       refreshToken,
       keepMeLogin: payload.keepMeLogin,
       role: userData.role,
+      project: "alesuke"
     };
   }
 };
