@@ -1,15 +1,9 @@
-node_modules
 # Keep environment variables out of version control
 
 .vercel
-generate-module.ts
-dist
-.env
-
-.env
-serviceAccount.ts
 node_modules
-uploads
-models
-wasm
 dist
+# .env
+uploads
+
+
