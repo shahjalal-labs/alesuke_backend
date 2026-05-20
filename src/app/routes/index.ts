@@ -43,4 +43,12 @@ const moduleRoutes = [
 
 moduleRoutes.forEach(route => router.use(route.path, route.route));
 
+router.get('/project', (req, res) => {
+  res.json({
+    project: 'alesuke',
+  });
+});
+
+
+
 export default router;
