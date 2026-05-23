@@ -36,6 +36,7 @@ app.use(
       'http://localhost:65347',
       'http://localhost:53284',
       'http://206.162.244.142',
+      'http://206.162.244.144:3181',
     ],
     credentials: true,
   }),
