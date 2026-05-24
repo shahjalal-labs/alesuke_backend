@@ -27,14 +27,6 @@ const signupToDb = async (payload: any) => {
     );
   }
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'User with this email already exists',
-    );
-  }
-
   // EMAIL signup requires password
   if (payload.logInProcess === LogInProcess.EMAIL && !password) {
     throw new ApiError(
@@ -48,6 +40,70 @@ const signupToDb = async (payload: any) => {
 
   // EMAIL SIGNUP -> user must verify email → send OTP
   if (payload.logInProcess === LogInProcess.EMAIL) {
+    const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true, isVerified: true } });
+
+    if (existingUser && !existingUser.isVerified) {
+
+      const result = await prisma.$transaction(async tx => {
+   const user = await tx.user.update({
+  where: { email },
+  data: {
+    fcmToken,
+    email,
+    password: hashedPassword,
+    logInProcess: payload.logInProcess || LogInProcess.EMAIL,
+    isVerified: false,
+    isProfileCompleted: false,
+    profileImage: payload.profileImage || null,
+    fullName: fullName || '',
+    phoneNumber: phoneNumber || '',
+    role: UserRole.USER,
+    status: UserStatus.ACTIVE,
+  },
+});
+
+        const otp = await tx.oTP.create({
+          data: {
+            userId: user.id,
+            code: generateRandomCode(6),
+            email: user.email,
+            purpose: OTPPurpose.EMAIL_VERIFICATION,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+          },
+        });
+
+        const { password, ...userWithoutPassword } = user;
+        return { user: userWithoutPassword, otp };
+      });
+
+      // Send OTP email AFTER transaction is complete
+      const html = otpEmail(result.otp.code, email, 'OTP for Email Verification');
+
+      // await sendEmailWithBrevo(
+      //   result.user.email,
+      //   "Verify Your Email Address",
+      //   html
+      // );
+
+      await sendEmail('Verify Your Email Address', email, html);
+
+      return {
+        ...result.user,
+        otp: result.otp,
+        isVerified: false,
+      };
+
+    }
+
+
+    if (existingUser && existingUser.isVerified) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'User with this email already exists',
+      );
+    }
+
+
     const result = await prisma.$transaction(async tx => {
       const user = await tx.user.create({
         data: {
@@ -95,6 +151,7 @@ const signupToDb = async (payload: any) => {
       otp: result.otp,
       isVerified: false,
     };
+
   }
 
   // SOCIAL SIGNUP (GOOGLE, APPLE)
@@ -347,7 +404,7 @@ const getMe = async (id: string) => {
   const result = await prisma.user.findUnique({
     where: { id },
     select: {
-       id: true,
+      id: true,
       fullName: true,
       nickname: true,
       email: true,
@@ -828,7 +885,7 @@ const resendOTP = async (payload: { email: string; purpose: OTPPurpose }) => {
   //   html,
   // );
   await sendEmail(`OTP for ${payload.purpose == OTPPurpose.EMAIL_VERIFICATION ? 'Email Verification' : 'Password Reset'}`,
-     user.email!, html);
+    user.email!, html);
 
   return {
     email: user.email,
