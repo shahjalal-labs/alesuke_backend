@@ -106,6 +106,41 @@ const deletePerson = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// addSelectedPeople,
+//   updateSelectedPeople,
+//   getSelectedPeopleToShow
+
+const addSelectedPeople = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProfileServices.addSelectedPeople(req.user.id, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: 'Selected people added successfully',
+    data: result,
+  });
+});
+
+const updateSelectedPeople = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await ProfileServices.updateSelectedPeople(req.user.id, id as string, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Selected people updated successfully',
+    data: result,
+  });
+});
+
+const getSelectedPeopleToShow = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProfileServices.getSelectedPeopleToShow(req.user.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Selected people fetched successfully',
+    data: result,
+  });
+});
+
 export const ProfileController = {
   updateProfile,
   addAddress,
@@ -116,4 +151,7 @@ export const ProfileController = {
   getPeopleByType,
   updatePerson,
   deletePerson,
+  addSelectedPeople,
+  updateSelectedPeople,
+  getSelectedPeopleToShow
 };

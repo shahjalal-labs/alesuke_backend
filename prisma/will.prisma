@@ -113,7 +113,7 @@ model BackupDistributor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  distribution          EstateDistribution @relation(fields: [distributionId], references: [id])
+  distribution          EstateDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
   person                People?            @relation(name: "BackupDistributorPerson", fields: [peopleId], references: [id])
 
   @@index([distributionId])

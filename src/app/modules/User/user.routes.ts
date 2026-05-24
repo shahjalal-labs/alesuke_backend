@@ -78,4 +78,27 @@ router.delete(
   ProfileController.deletePerson
 );
 
+router.post(
+  "/selected",
+  auth(),
+  // validateRequest(profileValidation.addSelectedPeopleValidationSchema),
+  ProfileController.addSelectedPeople
+)
+
+// Update selected people to show
+router.put(
+  "/selected/:id",
+  auth(),
+  // validateRequest(profileValidation.updateSelectedPeopleValidationSchema),
+  ProfileController.updateSelectedPeople
+);
+
+// Get selected people to show
+router.get(
+  "/selected",
+  auth(),
+  ProfileController.getSelectedPeopleToShow
+);
+
+
 export const ProfileRoutes = router;

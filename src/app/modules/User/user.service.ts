@@ -291,6 +291,96 @@ const deletePerson = async (userId: string, personId: string) => {
   return { id: personId, deleted: true };
 };
 
+const addSelectedPeople = async (userId: string, payload: any) => {
+  const people = await prisma.people.findUnique({
+    where: { id: payload.peopleId },
+  });
+  
+  if (!people) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'People not found');
+  }
+
+  const selectedPeople = await prisma.selectedPeopleToShow.upsert({
+  where: {
+    peopleId_userId: {
+      peopleId: payload.peopleId,
+      userId,
+    },
+  },
+  create: {
+    peopleId: payload.peopleId,
+    userId,
+  },
+  update: {},
+  select: {
+    id: true,
+    people: {
+      select: {
+        id: true,
+        fullName: true,
+        relationType: true
+      }
+    }
+  }
+});
+
+  return selectedPeople;
+};
+
+const updateSelectedPeople = async (userId: string, id: string, payload: any) => {
+  const people = await prisma.people.findUnique({
+    where: { id: payload.peopleId },
+  });
+  
+  if (!people) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'People not found');
+  }
+
+  const selectedPeople = await prisma.selectedPeopleToShow.update({
+    where: { id },
+    data: {
+      peopleId: payload.peopleId,
+      userId,
+    },
+    select: {
+      id: true,
+      people: {
+        select: {
+          id: true,
+          fullName: true,
+          relationType: true
+        }
+      }
+    }
+  });
+
+  return selectedPeople;
+};
+
+
+
+const getSelectedPeopleToShow = async (userId: string) => {
+  const people = await prisma.selectedPeopleToShow.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+     select: {
+      id: true,
+      people: {
+        select: {
+          id: true,
+          fullName: true,
+          relationType: true
+        }
+      }
+     }
+  },
+  
+
+);
+  return people;
+};
+
+
 export const ProfileServices = {
   updateProfile,
   addAddress,
@@ -301,4 +391,7 @@ export const ProfileServices = {
   getPeopleByType,
   updatePerson,
   deletePerson,
+  addSelectedPeople,
+  updateSelectedPeople,
+  getSelectedPeopleToShow
 };
