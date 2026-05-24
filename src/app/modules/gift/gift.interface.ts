@@ -10,6 +10,7 @@ export interface ICreateGift {
   financialAccountDetails?: string;         // Bank account details
   personalMessage?: string;
   recipients: IRecipient[];
+  propertyId?: string;                     // Optional property ID for property gifts
 }
 
 export interface IRecipient {

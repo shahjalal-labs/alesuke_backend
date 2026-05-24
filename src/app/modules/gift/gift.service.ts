@@ -48,6 +48,7 @@ let persons = [];
         propertyAddress: payload.propertyAddress,
         financialAccountDetails: payload.financialAccountDetails,
         personalMessage: payload.personalMessage,
+        propertyId: payload.propertyId,
         recipients: {
           create: persons?.map((recipient: any) => ({
             peopleID: recipient.id,
@@ -90,6 +91,7 @@ let persons = [];
     include: {
       gift: {
         include: {
+          property: true,
           recipients: {
             include: {
               recipient: { select: { id: true, fullName: true } },
@@ -109,6 +111,7 @@ const getGifts = async (userId: string) => {
   const gifts = await prisma.gift.findMany({
     where: { userId },
     include: {
+      property: true,
       recipients: {
         include: {
           recipient: {
@@ -137,6 +140,7 @@ const getGiftById = async (userId: string, giftId: string) => {
       userId,
     },
     include: {
+      property: true,
       recipients: {
         include: {
           recipient: {
@@ -171,6 +175,7 @@ const getGiftsByType = async (userId: string, giftType: GiftType) => {
       giftType,
     },
     include: {
+      property: true,
       recipients: {
         include: {
           recipient: {

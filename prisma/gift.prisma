@@ -18,6 +18,9 @@ model Gift {
     financialAccountDetails String?
     personalMessage         String?
     
+    propertyId             String?  @db.ObjectId
+    property               Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 

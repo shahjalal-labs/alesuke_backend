@@ -18,6 +18,7 @@ const createGiftValidationSchema = z.object({
     financialAccountDetails: z.string().optional(),
     personalMessage: z.string().optional(),
     recipients: z.array(recipientSchema).min(1, "At least one recipient is required"),
+    propertyId: z.string().optional(),
   }).superRefine((data, ctx) => {
     // Validate required fields based on gift type
     if (data.giftType === GiftType.CASH && !data.amount) {
@@ -48,13 +49,13 @@ const createGiftValidationSchema = z.object({
       });
     }
 
-    if (data.giftType === GiftType.PROPERTY && !data.propertyAddress) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["propertyAddress"],
-        message: "Property address is required",
-      });
-    }
+    // if (data.giftType === GiftType.PROPERTY && !data.propertyAddress) {
+    //   ctx.addIssue({
+    //     code: z.ZodIssueCode.custom,
+    //     path: ["propertyAddress"],
+    //     message: "Property address is required",
+    //   });
+    // }
 
     if (
       data.giftType === GiftType.FINANCIAL_ACCOUNT && 
