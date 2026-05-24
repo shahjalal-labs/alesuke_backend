@@ -129,8 +129,8 @@ model WillGift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  will  Will  @relation(fields: [willId], references: [id])
-  gift  Gift  @relation(fields: [giftId], references: [id])
+  will  Will  @relation(fields: [willId], references: [id], onDelete: Cascade)
+  gift  Gift  @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   @@index([willId])
   @@index([giftId])

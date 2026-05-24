@@ -41,10 +41,10 @@ model GiftRecipient {
     updatedAt DateTime @updatedAt
 
     peopleID  String @db.ObjectId
-    recipient People @relation(name: "GiftRecipientPerson", fields: [peopleID], references: [id])
+    recipient People @relation(name: "GiftRecipientPerson", fields: [peopleID], references: [id], onDelete: Cascade)
 
     giftId String @db.ObjectId
-    gift   Gift   @relation(fields: [giftId], references: [id])
+    gift   Gift   @relation(fields: [giftId], references: [id],     onDelete: Cascade)
 
     @@index([giftId])
     @@map("gift_recipients")
