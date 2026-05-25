@@ -53,6 +53,8 @@ model Asset {
 
   user User @relation(fields: [userId], references: [id])
 
+  gift Gift[]
+
   @@index([userId])
   @@map("assets")
 }

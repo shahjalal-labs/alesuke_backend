@@ -11,6 +11,7 @@ export interface ICreateGift {
   personalMessage?: string;
   recipients: IRecipient[];
   propertyId?: string;                     // Optional property ID for property gifts
+  assetId?: string;                        // Optional asset ID for asset gifts
 }
 
 export interface IRecipient {

@@ -57,16 +57,16 @@ const createGiftValidationSchema = z.object({
     //   });
     // }
 
-    if (
-      data.giftType === GiftType.FINANCIAL_ACCOUNT && 
-      !data.financialAccountDetails
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["financialAccountDetails"],
-        message: "Financial account details are required",
-      });
-    }
+    // if (
+    //   data.giftType === GiftType.FINANCIAL_ACCOUNT && 
+    //   !data.financialAccountDetails
+    // ) {
+    //   ctx.addIssue({
+    //     code: z.ZodIssueCode.custom,
+    //     path: ["financialAccountDetails"],
+    //     message: "Financial account details are required",
+    //   });
+    // }
 
     // Validate total percentage doesn't exceed 100
     if (data.recipients && data.recipients.length > 0) {

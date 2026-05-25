@@ -11,6 +11,34 @@ const createGift = async (userId: string, payload: ICreateGift) => {
   // if (!user) {
   //   throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   // }
+
+  if (payload.assetId){
+    const asset = await prisma.asset.findFirst({
+      where: {
+        id: payload.assetId,
+        userId,
+      },
+    });
+
+    if (!asset) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Asset not found');
+    }
+  }
+
+  if (payload.propertyId){
+    const property = await prisma.property.findFirst({
+      where: {
+        id: payload.propertyId,
+        userId,
+      },
+    });
+
+    if (!property) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Property not found');
+    }
+  }
+  
+  
 let persons = [];
   // Validate all recipients exist and belong to user
   for (const recipient of payload.recipients) {
@@ -49,6 +77,7 @@ let persons = [];
         financialAccountDetails: payload.financialAccountDetails,
         personalMessage: payload.personalMessage,
         propertyId: payload.propertyId,
+        assetId: payload.assetId,
         recipients: {
           create: persons?.map((recipient: any) => ({
             peopleID: recipient.id,
@@ -92,6 +121,7 @@ let persons = [];
       gift: {
         include: {
           property: true,
+          asset: true,
           recipients: {
             include: {
               recipient: { select: { id: true, fullName: true } },
@@ -112,6 +142,7 @@ const getGifts = async (userId: string) => {
     where: { userId },
     include: {
       property: true,
+      asset: true,
       recipients: {
         include: {
           recipient: {
@@ -141,6 +172,7 @@ const getGiftById = async (userId: string, giftId: string) => {
     },
     include: {
       property: true,
+      asset: true,
       recipients: {
         include: {
           recipient: {
@@ -176,6 +208,7 @@ const getGiftsByType = async (userId: string, giftType: GiftType) => {
     },
     include: {
       property: true,
+      asset: true,
       recipients: {
         include: {
           recipient: {

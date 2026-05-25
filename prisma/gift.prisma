@@ -19,7 +19,10 @@ model Gift {
     personalMessage         String?
     
     propertyId             String?  @db.ObjectId
-    property               Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+    property               Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+    assetId                String?  @db.ObjectId
+    asset                  Asset?   @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
