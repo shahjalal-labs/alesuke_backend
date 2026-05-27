@@ -205,6 +205,14 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
     data.identifierValue = payload.identifierValue;
   }
 
+    if (payload.petType !== undefined) {
+      data.petType = payload.petType;
+    }
+
+    if (payload.petDescription !== undefined) {
+      data.petDescription = payload.petDescription;
+    }
+
   // Set governmentIssuedId based on whether typeOfIdentifier exists
   if (data.typeOfIdentifier && data.identifierValue) {
     data.governmentIssuedId = true;

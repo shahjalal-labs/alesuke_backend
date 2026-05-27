@@ -19,6 +19,8 @@ export interface IAddPerson {
   relationWithUser?: RelationType;
   governmentIssuedId?: boolean;
   relationType: RelationType;
+  petType?: string;
+  petDescription?: string;
 }
 
 export interface IUpdatePerson {
@@ -29,4 +31,7 @@ export interface IUpdatePerson {
   dateOfBirth?: string;
   relationWithUser?: RelationType;
   governmentIssuedId?: boolean;
+  relationType?: RelationType;
+  petType?: string;
+  petDescription?: string;
 }

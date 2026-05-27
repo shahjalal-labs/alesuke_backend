@@ -67,8 +67,9 @@ enum Religion {
   BUDDHIST
   MUSLIM
   HINDU
-  JEWISH
+  JUDAISM
   SIKH
+  TAOISM
   OTHER
 }
 
@@ -181,6 +182,8 @@ model People {
   estateDistributions EstateDistribution[] @relation("DistributionPerson")
   petAsPet            PetCaretaker[]       @relation("CaretakerPet")
   petAsCaretaker      PetCaretaker[]       @relation("CaretakerPerson")
+  petType             String?
+  petDescription      String?
   // Add these opposite relations for backup distributors
   backupDistributors  BackupDistributor[]  @relation("BackupDistributorPerson")
 

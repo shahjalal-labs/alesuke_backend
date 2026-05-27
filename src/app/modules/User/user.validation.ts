@@ -10,6 +10,7 @@ const updateProfileValidationSchema = z.object({
     religion: z.nativeEnum(Religion).optional(),
     maritalStatus: z.nativeEnum(MaritalStatus).optional(),
     profileImage: z.string().optional(),
+
   }),
 });
 
@@ -23,6 +24,8 @@ const addPersonValidationSchema = z.object({
     relationWithUser: z.nativeEnum(RelationType).optional().nullable(),
     governmentIssuedId: z.boolean().optional().default(false),
     relationType: z.nativeEnum(RelationType),
+    petType: z.string().optional(),
+    petDescription: z.string().optional(),
   }).superRefine((data, ctx) => {
     // For PET type - no additional validation needed
     if (data.relationType === RelationType.PET) {
@@ -86,6 +89,8 @@ const updatePersonValidationSchema = z.object({
     dateOfBirth: z.string().optional().nullable(),
     relationWithUser: z.nativeEnum(RelationType).optional().nullable(),
     governmentIssuedId: z.boolean().optional(),
+    petType: z.string().optional(),
+    petDescription: z.string().optional(),
   }),
 });
 
