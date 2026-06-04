@@ -5,6 +5,7 @@ import { AuthRoutes } from '../modules/Auth/auth.routes';
 import { ProfileRoutes } from '../modules/User/user.routes';
 import { GiftRoutes } from '../modules/gift/gift.routes';
 import { PaymentRoutes } from '../modules/payment/payment.routes';
+import { DigitalAssetRoutes } from '../modules/digitalAssets/digitalAsset.route';
 
 const router = express.Router();
 
@@ -36,8 +37,11 @@ const moduleRoutes = [
     path: '/payments',
     route: PaymentRoutes,
   },
+  {
+    path: '/digital-assets',
+    route: DigitalAssetRoutes,
+  },
   
-
 
 ];
 

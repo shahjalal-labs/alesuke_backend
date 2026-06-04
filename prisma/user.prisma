@@ -126,6 +126,7 @@ model User {
   loans      Loan[]
   advisors   Advisor[]
   payments   Payment[]
+  userDigitalAssets UserDigitalAssets[]
 
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt

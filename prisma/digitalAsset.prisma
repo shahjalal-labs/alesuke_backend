@@ -1,0 +1,42 @@
+// REMOVE the DigitalAssetCategory enum and DigitalAsset model
+// REPLACE with this:
+
+model UserDigitalAssets {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+
+  // Streaming & Entertainment
+  hasNetflix        Boolean  @default(false)
+  hasDisneyPlus     Boolean  @default(false)
+  hasPrimeVideo     Boolean  @default(false)
+  hasViu            Boolean  @default(false)
+  hasAppleTVPlus    Boolean  @default(false)
+
+  // Music & Audio
+  hasSpotify        Boolean  @default(false)
+  hasYouTubePremium Boolean  @default(false)
+  hasAudible        Boolean  @default(false)
+
+  // Cloud Storage
+  hasICloud         Boolean  @default(false)
+  hasGoogleDrive    Boolean  @default(false)
+  hasOneDrive       Boolean  @default(false)
+
+  // Ride & Food Delivery
+  hasGrab           Boolean  @default(false)
+  hasFoodpanda      Boolean  @default(false)
+
+  // Brokerage & Trading
+  hasBrokerageETF   Boolean  @default(false)
+
+  // Optional details for brokerage
+  brokerageDetails  String?  // Platform names, account info
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@map("user_digital_assets")
+}
