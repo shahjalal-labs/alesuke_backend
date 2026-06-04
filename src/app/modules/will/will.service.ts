@@ -847,7 +847,7 @@ const getDashboard = async (userId: string) => {
   // 1. Get user's basic info + family members
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { fullName: true, profileImage: true, maritalStatus: true },
+    select: { fullName: true, profileImage: true, maritalStatus: true, haveChildren: true, havePets: true },
   });
 
   const family = await prisma.people.findMany({
@@ -941,10 +941,31 @@ const getDashboard = async (userId: string) => {
     // totalOther + 
     totalLoansGiven - totalOutstanding;
 
-    const codeFamily = family.filter(f => ['SPOUSE', 'PARTNER', 'CHILD', 'PET'].includes(f.relationType))
+
+
+
+  const hasChildren = user?.haveChildren
+  const hasPets = user?.havePets
+
+  const allowedRelations = ['SPOUSE', 'PARTNER'];
+
+  if (hasChildren) {
+    allowedRelations.push('CHILD');
+  }
+
+  if (hasPets) {
+    allowedRelations.push('PET');
+  }
+
+  const codeFamily = family.filter(f =>
+    allowedRelations.includes(f.relationType)
+  );
+
+
+
   return {
     user: { name: user?.fullName, profileImage: user?.profileImage, maritalStatus: user?.maritalStatus },
-    family:  user?.maritalStatus === "SINGLE"
+    family: user?.maritalStatus === "SINGLE"
       ?
       codeFamily.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER')
       : user?.maritalStatus === "MARRIED" ? codeFamily.filter(f => f.relationType !== 'PARTNER')
