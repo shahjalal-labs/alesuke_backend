@@ -614,7 +614,7 @@ const resetPassword = async (payload: {
   email: string;
   token: string;
   password: string;
-}) => {
+}) => {  
   const userData = await prisma.user.findUnique({
     where: {
       email: payload.email,

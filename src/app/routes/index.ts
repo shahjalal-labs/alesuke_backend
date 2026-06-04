@@ -6,6 +6,7 @@ import { ProfileRoutes } from '../modules/User/user.routes';
 import { GiftRoutes } from '../modules/gift/gift.routes';
 import { PaymentRoutes } from '../modules/payment/payment.routes';
 import { DigitalAssetRoutes } from '../modules/digitalAssets/digitalAsset.route';
+import { adminRoutes } from '../modules/admin/admin.route';
 
 const router = express.Router();
 
@@ -40,6 +41,10 @@ const moduleRoutes = [
   {
     path: '/digital-assets',
     route: DigitalAssetRoutes,
+  },
+  {
+    path: '/admin',
+    route: adminRoutes,
   },
   
 
