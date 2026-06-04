@@ -239,14 +239,67 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
   return person;
 };
 
+
+
+
 // GET ALL PEOPLE FOR USER
 const getPeople = async (userId: string) => {
-  const people = await prisma.people.findMany({
-    where: { userId },
-    orderBy: { createdAt: 'desc' },
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { fullName: true, profileImage: true, maritalStatus: true, haveChildren: true, havePets: true },
   });
 
-  return people;
+  const hasChildren = user?.haveChildren
+  const hasPets = user?.havePets
+  const allowedRelations = [
+    "FRIEND",
+    "SISTER",
+    "BROTHER",
+    "COUSIN",
+    "FATHER",
+    "MOTHER",
+    "SIBLING",
+    "GRANDPARENT",
+    "PARENT",
+    "NEPHEW",
+    "OTHER",
+  ];
+
+  if (user?.maritalStatus === "MARRIED") {
+    allowedRelations.push('SPOUSE');
+  }
+
+  if (user?.maritalStatus === "LONG_TERM_PARTNER") {
+    allowedRelations.push('PARTNER');
+  }
+
+  if (hasChildren) {
+    allowedRelations.push('CHILD');
+  }
+
+  if (hasPets) {
+    allowedRelations.push('PET');
+  }
+
+  const family = await prisma.people.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  const codeFamily = family.filter(f =>
+    allowedRelations.includes(f.relationType)
+  );
+
+
+
+
+  // const people = await prisma.people.findMany({
+  //   where: { userId },
+  //   orderBy: { createdAt: 'desc' },
+  // });
+
+  return codeFamily;
 };
 
 // GET PEOPLE BY RELATION TYPE
