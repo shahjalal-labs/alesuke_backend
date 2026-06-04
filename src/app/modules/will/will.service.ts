@@ -943,7 +943,11 @@ const getDashboard = async (userId: string) => {
 
   return {
     user: { name: user?.fullName, profileImage: user?.profileImage, maritalStatus: user?.maritalStatus },
-    family: user?.maritalStatus === "SINGLE" ? family.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER') : family || [],
+    family: user?.maritalStatus === "SINGLE"
+      ?
+      family.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER')
+      : user?.maritalStatus === "MARRIED" ? family.filter(f => f.relationType !== 'PARTNER')
+        : user?.maritalStatus === "LONG_TERM_PARTNER" ? family.filter(f => f.relationType !== 'SPOUSE') : [],
     // family,
     executors: will?.executors || [],
     estateDistributions: will?.estateDistributions || [],
