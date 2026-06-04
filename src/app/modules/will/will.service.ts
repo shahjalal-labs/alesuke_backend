@@ -941,13 +941,14 @@ const getDashboard = async (userId: string) => {
     // totalOther + 
     totalLoansGiven - totalOutstanding;
 
+    const codeFamily = family.filter(f => ['SPOUSE', 'PARTNER', 'CHILD', 'PET'].includes(f.relationType))
   return {
     user: { name: user?.fullName, profileImage: user?.profileImage, maritalStatus: user?.maritalStatus },
-    family: user?.maritalStatus === "SINGLE"
+    family:  user?.maritalStatus === "SINGLE"
       ?
-      family.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER')
-      : user?.maritalStatus === "MARRIED" ? family.filter(f => f.relationType !== 'PARTNER')
-        : user?.maritalStatus === "LONG_TERM_PARTNER" ? family.filter(f => f.relationType !== 'SPOUSE') : [],
+      codeFamily.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER')
+      : user?.maritalStatus === "MARRIED" ? codeFamily.filter(f => f.relationType !== 'PARTNER')
+        : user?.maritalStatus === "LONG_TERM_PARTNER" ? codeFamily.filter(f => f.relationType !== 'SPOUSE') : [],
     // family,
     executors: will?.executors || [],
     estateDistributions: will?.estateDistributions || [],
