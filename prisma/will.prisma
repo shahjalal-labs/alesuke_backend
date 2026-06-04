@@ -150,8 +150,8 @@ model PetCaretaker {
   updatedAt DateTime @updatedAt
 
   will      Will   @relation(fields: [willId], references: [id])
-  pet       People @relation(name: "CaretakerPet", fields: [petId], references: [id])
-  caretaker People @relation(name: "CaretakerPerson", fields: [caretakerId], references: [id])
+  pet       People @relation(name: "CaretakerPet", fields: [petId], references: [id], onDelete: Cascade)
+  caretaker People @relation(name: "CaretakerPerson", fields: [caretakerId], references: [id], onDelete: Cascade)
 
   @@index([willId])
   @@map("pet_caretakers")
