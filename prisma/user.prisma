@@ -98,6 +98,8 @@ model User {
   region             Region?
   religion           Religion?
   maritalStatus      MaritalStatus?
+  haveChildren        Boolean?       @default(false)
+  havePets            Boolean?       @default(false)
   role               UserRole       @default(USER)
   status             UserStatus     @default(ACTIVE)
   logInProcess       LogInProcess

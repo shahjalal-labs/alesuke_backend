@@ -6,11 +6,12 @@ const updateProfileValidationSchema = z.object({
     fullName: z.string().min(1, "Full name is required").optional(),
     nickname: z.string().min(1, "Nickname is required").optional(),
     phoneNumber: z.string().optional(),
-    region:  z.nativeEnum(Region).optional(),
+    region: z.nativeEnum(Region).optional(),
     religion: z.nativeEnum(Religion).optional(),
     maritalStatus: z.nativeEnum(MaritalStatus).optional(),
     profileImage: z.string().optional(),
-
+    haveChildren: z.boolean().optional(),
+    havePets: z.boolean().optional(),
   }),
 });
 

@@ -42,6 +42,8 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
       religion: true,
       maritalStatus: true,
       isProfileCompleted: true,
+      haveChildren: true,
+      havePets: true,
     },
   });
 
