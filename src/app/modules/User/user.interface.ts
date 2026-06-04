@@ -6,6 +6,8 @@ export interface IUpdateProfile {
   phoneNumber?: string;
   religion?: Religion; 
   region?: Region; 
+  haveChildren?: string | boolean;
+  havePets?: string | boolean;
   maritalStatus?: MaritalStatus;
   profileImage?: string;
 }

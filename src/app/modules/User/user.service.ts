@@ -28,6 +28,8 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
     where: { id: userId },
     data: {
       ...payload,
+      haveChildren: payload.haveChildren !== undefined ? payload.haveChildren === 'true' ? true : false : user.haveChildren,
+      havePets: payload.havePets !== undefined ? payload.havePets === 'true' ? true : false : user.havePets,
       profileImage: newProfileImageUrl || user.profileImage,
       isProfileCompleted: true,
     },
