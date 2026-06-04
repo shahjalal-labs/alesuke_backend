@@ -51,8 +51,8 @@ model Executor {
   updatedAt DateTime @updatedAt
 
   will         Will    @relation(fields: [willId], references: [id])
-  person       People?  @relation(name: "ExecutorMainPerson", fields: [peopleId], references: [id])
-  backupPerson People? @relation(name: "ExecutorBackupPerson", fields: [backupPeopleId], references: [id])
+  person       People?  @relation(name: "ExecutorMainPerson", fields: [peopleId], references: [id], onDelete: Cascade)
+  backupPerson People? @relation(name: "ExecutorBackupPerson", fields: [backupPeopleId], references: [id], onDelete: Cascade)
 
   @@index([willId])
   @@map("executors")
