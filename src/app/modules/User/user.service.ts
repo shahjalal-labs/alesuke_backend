@@ -116,7 +116,7 @@ const getProfile = async (userId: string) => {
       isProfileCompleted: true,
       subscriptionTier: true,
       createdAt: true,
-      addresses:true,
+      addresses: true,
       people: {
         select: {
           id: true,
@@ -141,10 +141,10 @@ const getProfile = async (userId: string) => {
           giftType: true,
           itemName: true,
           personalMessage: true,
-          
-          recipients:true,
+
+          recipients: true,
         },
-      },      
+      },
 
     },
   });
@@ -163,19 +163,25 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-    const existingWill = await prisma.will.findUnique({ where: { userId } });
+  const existingWill = await prisma.will.findUnique({ where: { userId } });
 
-    if (!existingWill) {
-      await prisma.will.create({
-        data: {
-          userId,
-          status: WillStatus.DRAFT
-        },
-      });
-    }
+  if (!existingWill) {
+    await prisma.will.create({
+      data: {
+        userId,
+        status: WillStatus.DRAFT
+      },
+    });
+  }
+
+  if (payload.relationType === "SPOUSE" || payload.relationType === "PARTNER") {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { maritalStatus: payload.relationType === "SPOUSE" ? "MARRIED" : "LONG_TERM_PARTNER" },
+    });
+  }
 
 
-  
   // Prepare data object with required fields
   const data: any = {
     userId,
@@ -187,11 +193,11 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
   if (payload.email !== undefined && payload.email !== null) {
     data.email = payload.email;
   }
-  
+
   if (payload.relationWithUser !== undefined && payload.relationWithUser !== null) {
     data.relationWithUser = payload.relationWithUser;
   }
-  
+
   if (payload.dateOfBirth !== undefined && payload.dateOfBirth !== null) {
     data.dateOfBirth = new Date(payload.dateOfBirth);
   }
@@ -200,18 +206,18 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
   if (payload.typeOfIdentifier !== undefined && payload.typeOfIdentifier !== null) {
     data.typeOfIdentifier = payload.typeOfIdentifier;
   }
-  
+
   if (payload.identifierValue !== undefined && payload.identifierValue !== null) {
     data.identifierValue = payload.identifierValue;
   }
 
-    if (payload.petType !== undefined) {
-      data.petType = payload.petType;
-    }
+  if (payload.petType !== undefined) {
+    data.petType = payload.petType;
+  }
 
-    if (payload.petDescription !== undefined) {
-      data.petDescription = payload.petDescription;
-    }
+  if (payload.petDescription !== undefined) {
+    data.petDescription = payload.petDescription;
+  }
 
   // Set governmentIssuedId based on whether typeOfIdentifier exists
   if (data.typeOfIdentifier && data.identifierValue) {
@@ -303,34 +309,34 @@ const addSelectedPeople = async (userId: string, payload: any) => {
   const people = await prisma.people.findUnique({
     where: { id: payload.peopleId },
   });
-  
+
   if (!people) {
     throw new ApiError(httpStatus.NOT_FOUND, 'People not found');
   }
 
   const selectedPeople = await prisma.selectedPeopleToShow.upsert({
-  where: {
-    peopleId_userId: {
+    where: {
+      peopleId_userId: {
+        peopleId: payload.peopleId,
+        userId,
+      },
+    },
+    create: {
       peopleId: payload.peopleId,
       userId,
     },
-  },
-  create: {
-    peopleId: payload.peopleId,
-    userId,
-  },
-  update: {},
-  select: {
-    id: true,
-    people: {
-      select: {
-        id: true,
-        fullName: true,
-        relationType: true
+    update: {},
+    select: {
+      id: true,
+      people: {
+        select: {
+          id: true,
+          fullName: true,
+          relationType: true
+        }
       }
     }
-  }
-});
+  });
 
   return selectedPeople;
 };
@@ -339,7 +345,7 @@ const updateSelectedPeople = async (userId: string, id: string, payload: any) =>
   const people = await prisma.people.findUnique({
     where: { id: payload.peopleId },
   });
-  
+
   if (!people) {
     throw new ApiError(httpStatus.NOT_FOUND, 'People not found');
   }
@@ -371,7 +377,7 @@ const getSelectedPeopleToShow = async (userId: string) => {
   const people = await prisma.selectedPeopleToShow.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
-     select: {
+    select: {
       id: true,
       people: {
         select: {
@@ -380,11 +386,11 @@ const getSelectedPeopleToShow = async (userId: string) => {
           relationType: true
         }
       }
-     }
+    }
   },
-  
 
-);
+
+  );
   return people;
 };
 
