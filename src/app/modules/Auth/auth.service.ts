@@ -419,7 +419,9 @@ const getMe = async (id: string) => {
       isProfileCompleted: true,
       createdAt: true,
       addresses: true,
-      payments: true
+      payments: true,
+      haveChildren: true,
+      havePets: true,
     }
   });
 

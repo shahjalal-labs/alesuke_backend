@@ -389,6 +389,66 @@ const getAllDistributions = async (userId: string) => {
 };
 
 // Add multiple distributions with auto-calculated percentages
+// const addDistributions = async (userId: string, distributions: any[]) => {
+//   const will = await prisma.will.findUnique({ where: { userId } });
+//   if (!will) throw new ApiError(httpStatus.NOT_FOUND, 'Will not found');
+
+//   // Delete existing distributions first (replace all)
+//   await prisma.estateDistribution.deleteMany({ where: { willId: will.id } });
+
+//   // Auto-calculate percentage
+//   // const percentage = calculateAutoPercentages(distributions.length);
+
+//   // Validate all people first
+//   for (const dist of distributions) {
+//     if (dist.peopleId) {
+//       const person = await prisma.people.findFirst({ where: { id: dist.peopleId, userId } });
+//       if (!person) throw new ApiError(httpStatus.NOT_FOUND, `Person with ID ${dist.peopleId} not found`);
+//     }
+//   }
+
+//   // Create all distributions
+//   const createdDistributions = await prisma.$transaction(
+//     distributions.map((dist, index) =>
+//       prisma.estateDistribution.create({
+//         data: {
+//           willId: will.id,
+//           peopleId: dist.peopleId || null,
+//           charityName: dist.charityName || null,
+//           charityUEN: dist.charityUEN || null,
+//           // percentage: percentage,
+//           percentage: dist.percentage,
+//           distributionType: dist.distributionType || 'PERCENTAGE',
+//           order: index + 1,
+//           notes: dist.notes,
+//           backupDistributors: dist.backupDistributors?.length > 0 ? {
+//             create: dist.backupDistributors.map((backup: any) => ({
+//               peopleId: backup.peopleId || null,
+//               charityName: backup.charityName || null,
+//               charityUEN: backup.charityUEN || null,
+//             })),
+//           } : undefined,
+//         },
+//         include: {
+//           person: { select: { id: true, fullName: true, email: true } },
+//           backupDistributors: {
+//             include: {
+//               person: { select: { id: true, fullName: true, email: true } },
+//             },
+//           },
+//         },
+//       })
+//     )
+//   );
+
+//   return {
+//     distributions: createdDistributions,
+//     totalCount: createdDistributions.length,
+//     autoPercentage: percentage,
+//     totalPercentage: percentage * createdDistributions.length,
+//   };
+// };
+
 const addDistributions = async (userId: string, distributions: any[]) => {
   const will = await prisma.will.findUnique({ where: { userId } });
   if (!will) throw new ApiError(httpStatus.NOT_FOUND, 'Will not found');
@@ -396,15 +456,28 @@ const addDistributions = async (userId: string, distributions: any[]) => {
   // Delete existing distributions first (replace all)
   await prisma.estateDistribution.deleteMany({ where: { willId: will.id } });
 
-  // Auto-calculate percentage
-  const percentage = calculateAutoPercentages(distributions.length);
-
-  // Validate all people first
+  // Validate all people
   for (const dist of distributions) {
     if (dist.peopleId) {
       const person = await prisma.people.findFirst({ where: { id: dist.peopleId, userId } });
       if (!person) throw new ApiError(httpStatus.NOT_FOUND, `Person with ID ${dist.peopleId} not found`);
     }
+  }
+
+  // Determine percentages
+  const hasManual = distributions.some(d => d.percentage !== undefined);
+  let finalPercentages: number[];
+  
+  if (hasManual) {
+    finalPercentages = distributions.map(d => d.percentage!);
+    const total = finalPercentages.reduce((s, p) => s + p, 0);
+    if (Math.abs(total - 100) > 0.01) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Total percentage must equal 100');
+    }
+  } else {
+    const auto = parseFloat((100 / distributions.length).toFixed(4));
+    // Distribute rounding error to first item
+    finalPercentages = distributions.map((_, i) => i === 0 ? 100 - auto * (distributions.length - 1) : auto);
   }
 
   // Create all distributions
@@ -416,7 +489,7 @@ const addDistributions = async (userId: string, distributions: any[]) => {
           peopleId: dist.peopleId || null,
           charityName: dist.charityName || null,
           charityUEN: dist.charityUEN || null,
-          percentage: percentage,
+          percentage: finalPercentages[index],
           distributionType: dist.distributionType || 'PERCENTAGE',
           order: index + 1,
           notes: dist.notes,
@@ -443,8 +516,7 @@ const addDistributions = async (userId: string, distributions: any[]) => {
   return {
     distributions: createdDistributions,
     totalCount: createdDistributions.length,
-    autoPercentage: percentage,
-    totalPercentage: percentage * createdDistributions.length,
+    totalPercentage: finalPercentages.reduce((s, p) => s + p, 0),
   };
 };
 

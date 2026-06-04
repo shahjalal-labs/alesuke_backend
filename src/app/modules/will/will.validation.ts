@@ -102,6 +102,7 @@ const distributionItemSchema = z.object({
 const addDistributionsValidationSchema = z.object({
   body: z.object({
     distributions: z.array(distributionItemSchema).min(1, "At least one distribution is required"),
+    percentage: z.number().min(0).max(100).optional(),
   }),
 });
 
