@@ -10,8 +10,8 @@ const updateProfileValidationSchema = z.object({
     religion: z.nativeEnum(Religion).optional(),
     maritalStatus: z.nativeEnum(MaritalStatus).optional(),
     profileImage: z.string().optional(),
-    haveChildren: z.boolean().optional(),
-    havePets: z.boolean().optional(),
+    haveChildren: z.string().optional(),
+    havePets: z.string().optional(),
   }),
 });
 
