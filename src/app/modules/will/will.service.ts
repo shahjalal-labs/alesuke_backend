@@ -38,7 +38,7 @@ const getMyWill = async (userId: string) => {
   const will = await prisma.will.findUnique({
     where: { userId },
     include: {
-   executors: {
+      executors: {
         include: {
           person: true,
           backupPerson: true,
@@ -847,7 +847,7 @@ const getDashboard = async (userId: string) => {
   // 1. Get user's basic info + family members
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { fullName: true, profileImage: true }
+    select: { fullName: true, profileImage: true, maritalStatus: true },
   });
 
   const family = await prisma.people.findMany({
@@ -942,8 +942,9 @@ const getDashboard = async (userId: string) => {
     totalLoansGiven - totalOutstanding;
 
   return {
-    user: { name: user?.fullName, profileImage: user?.profileImage },
-    family,
+    user: { name: user?.fullName, profileImage: user?.profileImage, maritalStatus: user?.maritalStatus },
+    family: user?.maritalStatus === "SINGLE" ? family.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER') : family || [],
+    // family,
     executors: will?.executors || [],
     estateDistributions: will?.estateDistributions || [],
     gifts: will?.willGifts.map(wg => ({
