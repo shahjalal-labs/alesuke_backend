@@ -136,6 +136,13 @@ router.put(
   WillController.bulkUpdateDistributions
 );
 
+router.put(
+  "/estate-distribution-type/:willId",
+  auth(),
+  validateRequest(willValidation.updateEstateDistributionTypeValidationSchema),
+  WillController.updateEstateDistributionType
+)
+
 // Add single distribution (auto-calculate percentage)
 router.post(
   "/distributions",

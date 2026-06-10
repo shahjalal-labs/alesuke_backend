@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DistributionType, ExecutorType } from "@prisma/client";
+import { DistributionType, EstateDistributionType, ExecutorType } from "@prisma/client";
 
 const updateWillStatusValidationSchema = z.object({
   body: z.object({
@@ -163,6 +163,11 @@ const addBackupExecutorValidationSchema = z.object({
   }),
 });
 
+const updateEstateDistributionTypeValidationSchema = z.object({
+  body: z.object({
+    estateDistributionType: z.nativeEnum(EstateDistributionType).optional(),
+  }),
+})
 
 
 export const willValidation = {
@@ -180,5 +185,6 @@ export const willValidation = {
   addBackupDistributorValidationSchema,
   updateBackupDistributorValidationSchema,
   bulkUpdateDistributionsValidationSchema,
-  addBackupExecutorValidationSchema,
+  addBackupExecutorValidationSchema, 
+  updateEstateDistributionTypeValidationSchema
 };

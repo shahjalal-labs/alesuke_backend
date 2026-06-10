@@ -1,4 +1,4 @@
-import { WillStatus } from '@prisma/client';
+import { EstateDistributionType, WillStatus } from '@prisma/client';
 import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiErrors';
 import prisma from '../../../shared/prisma';
@@ -467,7 +467,7 @@ const addDistributions = async (userId: string, distributions: any[]) => {
   // Determine percentages
   const hasManual = distributions.some(d => d.percentage !== undefined);
   let finalPercentages: number[];
-  
+
   if (hasManual) {
     finalPercentages = distributions.map(d => d.percentage!);
     const total = finalPercentages.reduce((s, p) => s + p, 0);
@@ -1036,6 +1036,8 @@ const getDashboard = async (userId: string) => {
 
 
   return {
+    id: will?.id || '',
+    estateDistributionType: will?.estateDistributionType,
     user: { name: user?.fullName, profileImage: user?.profileImage, maritalStatus: user?.maritalStatus },
     family: user?.maritalStatus === "SINGLE"
       ?
@@ -1070,6 +1072,91 @@ const getDashboard = async (userId: string) => {
   };
 };
 
+const updateEstateDistributionType = async (willId: string, userId: string, type: EstateDistributionType) => {
+  const will = await prisma.will.findUnique({
+    where: { id: willId },
+    select: { id: true, estateDistributionType: true }
+  });
+  if (!will) throw new ApiError(httpStatus.NOT_FOUND, 'Will not found');
+
+  // If same type, just return (no changes)
+  if (will.estateDistributionType === type) {
+    return { estateDistributionType: type, message: 'Distribution type unchanged' };
+  }
+
+  // Update the will's distribution type first
+  await prisma.will.update({
+    where: { userId },
+    data: { estateDistributionType: type },
+  });
+
+  // If switching to MANUAL, do NOT auto-create distributions.
+  // Optionally: you might want to preserve existing manual distributions?
+  // Here we do nothing extra for MANUAL.
+  if (type === 'MANUAL') {
+    await prisma.estateDistribution.deleteMany({ where: { willId: will.id } });
+
+    return {
+      estateDistributionType: type,
+      message: 'Switched to manual distribution mode. No automatic distributions created.',
+    };
+  }
+
+  // --- AUTO mode: generate distributions based on family ---
+
+  // Fetch user and family data
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { maritalStatus: true, haveChildren: true, havePets: true },
+  });
+  if (!user) throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+
+  const family = await prisma.people.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const allowedRelations = ['SPOUSE', 'PARTNER'];
+  if (user.haveChildren) allowedRelations.push('CHILD');
+  // if (user.havePets) allowedRelations.push('PET');
+
+  let eligibleFamily = family.filter(f => allowedRelations.includes(f.relationType));
+
+  // Apply marital status filtering
+  if (user.maritalStatus === 'MARRIED') {
+    eligibleFamily = eligibleFamily.filter(f => f.relationType !== 'PARTNER');
+  } else if (user.maritalStatus === 'LONG_TERM_PARTNER') {
+    eligibleFamily = eligibleFamily.filter(f => f.relationType !== 'SPOUSE');
+  } else {
+    // SINGLE: exclude spouse and partner
+    eligibleFamily = eligibleFamily.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER');
+  }
+
+  if (eligibleFamily.length === 0) {
+    // Delete any existing distributions and return empty
+    await prisma.estateDistribution.deleteMany({ where: { willId: will.id } });
+    // return {
+    //   estateDistributionType: type,
+    //   message: 'No eligible family members for auto-distribution. All distributions cleared.',
+    //   distributions: [],
+    // };
+  }
+
+  // Prepare distributions – do NOT provide percentage, let addDistributions auto-calc with rounding fix
+  const distributionsToCreate = eligibleFamily.map(person => ({
+    peopleId: person.id,
+    // No percentage field – addDistributions will compute equal split
+  }));
+
+  // Use addDistributions which deletes existing and creates new with proper rounding
+  const result = await addDistributions(userId, distributionsToCreate);
+
+  return {
+    estateDistributionType: type,
+    message: `Switched to AUTO mode. Created ${result.totalCount} distributions.`,
+    distributions: result.distributions,
+  };
+};
 
 export const WillServices = {
   createWill,
@@ -1097,5 +1184,5 @@ export const WillServices = {
   bulkUpdateDistributions,
   addBackupDistributor,
   getDashboard,
-
+  updateEstateDistributionType
 };

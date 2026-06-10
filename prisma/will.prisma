@@ -9,6 +9,7 @@ enum DistributionType {
   RESIDUARY
   CHARITY
 }
+
 enum WillStatus {
   DRAFT
   COMPLETED
@@ -16,42 +17,46 @@ enum WillStatus {
   REVOKED
 }
 
+enum EstateDistributionType {
+  AUTO
+  MANUAL
+}
+
 model Will {
-  id              String     @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String     @db.ObjectId
-  status          WillStatus @default(DRAFT)
-  completedSteps  String[]
-  currentStep     Int        @default(1)
-  
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String     @db.ObjectId
+  status         WillStatus @default(DRAFT)
+  completedSteps String[]
+  currentStep    Int        @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user                  User                  @relation(fields: [userId], references: [id])
-  executors             Executor[]
-  estateDistributions   EstateDistribution[]
-  willGifts             WillGift[]
-  petCaretakers         PetCaretaker[]
+  estateDistributionType EstateDistributionType?
   
-
-
+  user                   User                    @relation(fields: [userId], references: [id])
+  executors              Executor[]
+  estateDistributions    EstateDistribution[]
+  willGifts              WillGift[]
+  petCaretakers          PetCaretaker[]
 
   @@unique([userId])
   @@map("wills")
 }
 
 model Executor {
-  id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  willId          String       @db.ObjectId
-  peopleId        String?       @db.ObjectId
-  executorType    ExecutorType?
-  backupPeopleId  String?      @db.ObjectId
-  order           Int          @default(1)
-  
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  willId         String        @db.ObjectId
+  peopleId       String?       @db.ObjectId
+  executorType   ExecutorType?
+  backupPeopleId String?       @db.ObjectId
+  order          Int           @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   will         Will    @relation(fields: [willId], references: [id])
-  person       People?  @relation(name: "ExecutorMainPerson", fields: [peopleId], references: [id], onDelete: Cascade)
+  person       People? @relation(name: "ExecutorMainPerson", fields: [peopleId], references: [id], onDelete: Cascade)
   backupPerson People? @relation(name: "ExecutorBackupPerson", fields: [backupPeopleId], references: [id], onDelete: Cascade)
 
   @@index([willId])
@@ -68,7 +73,7 @@ model Executor {
 //   distributionType DistributionType
 //   order           Int              @default(1)
 //   notes           String?
-  
+
 //   createdAt DateTime @default(now())
 //   updatedAt DateTime @updatedAt
 
@@ -79,58 +84,57 @@ model Executor {
 //   @@map("estate_distributions")
 // }
 
-
 model EstateDistribution {
-  id              String           @id @default(auto()) @map("_id") @db.ObjectId
-  willId          String           @db.ObjectId
-  peopleId        String?          @db.ObjectId
-  charityName     String?
-  charityUEN      String?
-  percentage      Float
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  willId           String           @db.ObjectId
+  peopleId         String?          @db.ObjectId
+  charityName      String?
+  charityUEN       String?
+  percentage       Float
   distributionType DistributionType
-  order           Int              @default(1)
-  notes           String?
-  
+  order            Int              @default(1)
+  notes            String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  will            Will                      @relation(fields: [willId], references: [id])
-  person          People?                   @relation(name: "DistributionPerson", fields: [peopleId], references: [id])
+  will               Will                @relation(fields: [willId], references: [id])
+  person             People?             @relation(name: "DistributionPerson", fields: [peopleId], references: [id])
   backupDistributors BackupDistributor[]
-  
+
   @@index([willId])
   @@map("estate_distributions")
 }
 
 model BackupDistributor {
-  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  distributionId        String   @db.ObjectId
-  peopleId              String?  @db.ObjectId
-  charityName           String?
-  charityUEN            String?
-  order                 Int      @default(1)
-  
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  distributionId String  @db.ObjectId
+  peopleId       String? @db.ObjectId
+  charityName    String?
+  charityUEN     String?
+  order          Int     @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  distribution          EstateDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
-  person                People?            @relation(name: "BackupDistributorPerson", fields: [peopleId], references: [id])
+  distribution EstateDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
+  person       People?            @relation(name: "BackupDistributorPerson", fields: [peopleId], references: [id])
 
   @@index([distributionId])
   @@map("backup_distributors")
 }
 
 model WillGift {
-  id      String @id @default(auto()) @map("_id") @db.ObjectId
-  willId  String @db.ObjectId
-  giftId  String @db.ObjectId
-  order   Int    @default(1)
-  
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  willId String @db.ObjectId
+  giftId String @db.ObjectId
+  order  Int    @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  will  Will  @relation(fields: [willId], references: [id], onDelete: Cascade)
-  gift  Gift  @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  will Will @relation(fields: [willId], references: [id], onDelete: Cascade)
+  gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   @@index([willId])
   @@index([giftId])
@@ -138,14 +142,14 @@ model WillGift {
 }
 
 model PetCaretaker {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  willId          String   @db.ObjectId
-  petId           String   @db.ObjectId
-  caretakerId     String   @db.ObjectId
-  cashAllocation  Float?
-  notes           String?
-  order           Int      @default(1)
-  
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  willId         String  @db.ObjectId
+  petId          String  @db.ObjectId
+  caretakerId    String  @db.ObjectId
+  cashAllocation Float?
+  notes          String?
+  order          Int     @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

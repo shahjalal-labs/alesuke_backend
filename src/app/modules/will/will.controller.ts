@@ -275,7 +275,17 @@ const getDashboard = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
+const updateEstateDistributionType = catchAsync(async (req: Request, res: Response) => {
+  // console.log(req.user.id, req.body);
+  const willId = req.params.willId
+  const result = await WillServices.updateEstateDistributionType(willId as string, req.user.id, req.body?.estateDistributionType);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Estate distribution type updated successfully',
+    data: result,
+  });
+})
 export const WillController = {
   createWill,
   getMyWill,
@@ -302,4 +312,5 @@ export const WillController = {
   deleteBackupDistributor,
   deleteEstateDistribution,
   getDashboard,
+  updateEstateDistributionType
 };
