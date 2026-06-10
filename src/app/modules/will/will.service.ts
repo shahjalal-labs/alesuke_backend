@@ -469,12 +469,15 @@ const addDistributions = async (userId: string, distributions: any[]) => {
   let finalPercentages: number[];
 
   if (hasManual) {
+    await prisma.will.update({ where: { userId }, data: { estateDistributionType: 'MANUAL' } });
+
     finalPercentages = distributions.map(d => d.percentage!);
     const total = finalPercentages.reduce((s, p) => s + p, 0);
     if (Math.abs(total - 100) > 0.01) {
       throw new ApiError(httpStatus.BAD_REQUEST, 'Total percentage must equal 100');
     }
   } else {
+    await prisma.will.update({ where: { userId }, data: { estateDistributionType: 'AUTO' } });
     const auto = parseFloat((100 / distributions.length).toFixed(4));
     // Distribute rounding error to first item
     finalPercentages = distributions.map((_, i) => i === 0 ? 100 - auto * (distributions.length - 1) : auto);
@@ -1084,16 +1087,17 @@ const updateEstateDistributionType = async (willId: string, userId: string, type
     return { estateDistributionType: type, message: 'Distribution type unchanged' };
   }
 
-  // Update the will's distribution type first
-  await prisma.will.update({
-    where: { userId },
-    data: { estateDistributionType: type },
-  });
+
 
   // If switching to MANUAL, do NOT auto-create distributions.
   // Optionally: you might want to preserve existing manual distributions?
   // Here we do nothing extra for MANUAL.
   if (type === 'MANUAL') {
+      // Update the will's distribution type first
+  await prisma.will.update({
+    where: { userId },
+    data: { estateDistributionType: type },
+  });
     await prisma.estateDistribution.deleteMany({ where: { willId: will.id } });
 
     return {
