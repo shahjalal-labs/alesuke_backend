@@ -38,6 +38,7 @@ app.use(
       'http://206.162.244.142',
       'http://206.162.244.144:3181',
       'http://206.162.244.144:3190',
+      'https://will-way.smtsigma.com'
     ],
     credentials: true,
   }),
