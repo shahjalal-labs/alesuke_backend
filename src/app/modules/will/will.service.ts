@@ -1093,11 +1093,11 @@ const updateEstateDistributionType = async (willId: string, userId: string, type
   // Optionally: you might want to preserve existing manual distributions?
   // Here we do nothing extra for MANUAL.
   if (type === 'MANUAL') {
-      // Update the will's distribution type first
-  await prisma.will.update({
-    where: { userId },
-    data: { estateDistributionType: type },
-  });
+    // Update the will's distribution type first
+    await prisma.will.update({
+      where: { userId },
+      data: { estateDistributionType: type },
+    });
     await prisma.estateDistribution.deleteMany({ where: { willId: will.id } });
 
     return {
