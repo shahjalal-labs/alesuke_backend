@@ -1,5 +1,5 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { PaymentService } from '../app/modules/payment/payment.service';
+import { handleWebhook } from '../app/modules/payment/payment.service';
 
 const router = express.Router();
 
@@ -18,7 +18,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 
   try {
-    const result = await PaymentService.handleWebhook(req.body as Buffer, signature);
+    const result = await handleWebhook(req.body as Buffer, signature);
     res.status(200).json(result);
   } catch (error) {
     next(error);
