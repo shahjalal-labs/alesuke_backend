@@ -3,42 +3,57 @@ import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiErrors';
 import prisma from '../../../shared/prisma';
 import config from '../../../config';
+import { PaymentType } from '@prisma/client';
 
-const getStripe = () =>
-  new Stripe(config.stripe.secretKey);
+const getStripe = () => new Stripe(config.stripe.secretKey);
 
-// ─── Product Catalogue ─────────────────────────────────────────────────────────
-// Amounts and currency match the UI (SGD).
-// Price IDs are populated at startup by initializeStripeProducts() in app/utils/stripe.ts
-
+// ─── Product Catalogue ─────────────────────────────────────────
 const ESSENTIAL_WILL = {
   productId: 'essential_will',
   name: 'Essential Will',
-  amount: 8800,         // SGD 88.00 in cents
-  displayAmount: 88,    // Stored in Payment record
+  amount: 8800,
+  displayAmount: 88,
   currency: 'sgd',
   type: 'ONE_TIME' as const,
-  accessDays: 30,       // 30-day revision window shown in UI
+  accessDays: 30,
 };
 
 const UNLIMITED_LEGACY = {
   productId: 'unlimited_legacy',
   name: 'Unlimited Legacy',
-  amount: 14400,        // SGD 144.00/year (SGD 12 × 12) in cents
-  displayAmount: 144,
+  subscriptionAmount: 2400,
+  displaySubscriptionAmount: 24,
+  oneTimeAmount: 8800,
+  displayOneTimeAmount: 88,
   currency: 'sgd',
-  type: 'SUBSCRIPTION' as const,
+  type: 'BUNDLE' as const,
 };
 
-// ─── Customer Helpers ──────────────────────────────────────────────────────────
+// ─── Helper: Retry upsert on P2002 ────────────────────────────
+const upsertPaymentWithRetry = async (args: {
+  where: any;
+  update: any;
+  create: any;
+  retries?: number;
+  delayMs?: number;
+}) => {
+  const { where, update, create, retries = 3, delayMs = 100 } = args;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await prisma.payment.upsert({ where, update, create });
+    } catch (error: any) {
+      if (error.code === 'P2002' && i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw error;
+    }
+  }
+};
 
-/**
- * Reuses the saved stripeCustomerId on the User row.
- * Creates a new Stripe Customer if one doesn't exist or was deleted.
- */
+// ─── Customer Helper ──────────────────────────────────────────
 const getOrCreateStripeCustomer = async (userId: string): Promise<string> => {
   const stripe = getStripe();
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, fullName: true, stripeCustomerId: true },
@@ -50,7 +65,7 @@ const getOrCreateStripeCustomer = async (userId: string): Promise<string> => {
       const existing = await stripe.customers.retrieve(user.stripeCustomerId);
       if (!existing.deleted) return existing.id;
     } catch {
-      // Deleted from Stripe — fall through and create a fresh one
+      // fall through
     }
   }
 
@@ -64,17 +79,11 @@ const getOrCreateStripeCustomer = async (userId: string): Promise<string> => {
     where: { id: userId },
     data: { stripeCustomerId: customer.id },
   });
-
   return customer.id;
 };
 
-// ─── Checkout Sessions ─────────────────────────────────────────────────────────
-
-/**
- * Essential Will — SGD 88 one-time payment.
- * Uses inline price_data so no pre-created Stripe price is needed.
- */
-const createEssentialWillCheckout = async (
+// ─── Checkout: Essential Will ─────────────────────────────────
+export const createEssentialWillCheckout = async (
   userId: string,
   successUrl: string,
   cancelUrl: string,
@@ -84,30 +93,57 @@ const createEssentialWillCheckout = async (
   const will = await prisma.will.findUnique({ where: { userId } });
   if (!will) throw new ApiError(httpStatus.NOT_FOUND, 'Will not found');
 
-  const alreadyPaid = await prisma.payment.findFirst({
-    where: { userId, productId: ESSENTIAL_WILL.productId, status: 'SUCCEEDED' },
+  // const existingPaid = await prisma.payment.findFirst({
+  //   where: { userId, productId: ESSENTIAL_WILL.productId, status: 'SUCCEEDED' },
+  // });
+  // if (existingPaid) {
+  //   throw new ApiError(httpStatus.BAD_REQUEST, 'Essential Will already purchased');
+  // }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      subscriptionTier: true,
+      subscriptionExpiresAt: true,
+    },
   });
-  if (alreadyPaid) throw new ApiError(httpStatus.BAD_REQUEST, 'Essential Will already purchased');
+
+  const isActive =
+    user?.subscriptionTier === 'PREMIUM' &&
+    !!user.subscriptionExpiresAt &&
+    user.subscriptionExpiresAt > new Date();
+  console.log(user?.subscriptionExpiresAt, new Date());
+  if (isActive) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Essential Will already purchased');
+  }
+
+  // Reuse existing pending session (idempotency)
+  const existingPending = await prisma.payment.findFirst({
+    where: { userId, productId: ESSENTIAL_WILL.productId, status: 'PENDING' },
+  });
+  if (existingPending?.metadata) {
+    const meta = existingPending.metadata as any;
+    if (meta?.sessionId && meta?.checkoutUrl) {
+      return { checkoutUrl: meta.checkoutUrl, sessionId: meta.sessionId };
+    }
+  }
 
   const customerId = await getOrCreateStripeCustomer(userId);
-
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     payment_method_types: ['card'],
     mode: 'payment',
-    line_items: [
-      {
-        price_data: {
-          currency: ESSENTIAL_WILL.currency,
-          unit_amount: ESSENTIAL_WILL.amount,
-          product_data: {
-            name: ESSENTIAL_WILL.name,
-            description: 'A meticulously crafted self-customed will for your estate and final intentions',
-          },
+    line_items: [{
+      price_data: {
+        currency: ESSENTIAL_WILL.currency,
+        unit_amount: ESSENTIAL_WILL.amount,
+        product_data: {
+          name: ESSENTIAL_WILL.name,
+          description: 'One-time payment, 30 days of unlimited edits',
         },
-        quantity: 1,
       },
-    ],
+      quantity: 1,
+    }],
     payment_intent_data: {
       metadata: { userId, productId: ESSENTIAL_WILL.productId, willId: will.id },
     },
@@ -116,9 +152,11 @@ const createEssentialWillCheckout = async (
     cancel_url: cancelUrl,
   });
 
-  // Persist a PENDING record; the webhook will mark it SUCCEEDED
-  await prisma.payment.create({
-    data: {
+  // Use retry helper to avoid rare race conditions
+  await upsertPaymentWithRetry({
+    where: { sessionId: session.id },
+    update: {},
+    create: {
       userId,
       stripeCustomerId: customerId,
       amount: ESSENTIAL_WILL.displayAmount,
@@ -126,18 +164,19 @@ const createEssentialWillCheckout = async (
       status: 'PENDING',
       type: 'ONE_TIME',
       productId: ESSENTIAL_WILL.productId,
-      metadata: { sessionId: session.id, willId: will.id },
+      sessionId: session.id,
+      metadata: { willId: will.id, checkoutUrl: session.url },
     },
   });
-
+  await prisma.user.update({
+    where: { id: userId },
+    data: { subscriptionType: PaymentType.ONE_TIME },
+  })
   return { checkoutUrl: session.url, sessionId: session.id };
 };
 
-/**
- * Unlimited Legacy — SGD 12/month billed annually (SGD 144/year).
- * Uses the price ID that initializeStripeProducts() stored in config.stripe.unlimitedPriceId.
- */
-const createUnlimitedLegacyCheckout = async (
+// ─── Checkout: Unlimited Legacy (bundle) ──────────────────────
+export const createUnlimitedLegacyCheckout = async (
   userId: string,
   successUrl: string,
   cancelUrl: string,
@@ -147,17 +186,18 @@ const createUnlimitedLegacyCheckout = async (
   const will = await prisma.will.findUnique({ where: { userId } });
   if (!will) throw new ApiError(httpStatus.NOT_FOUND, 'Will not found');
 
-  const activeSub = await prisma.payment.findFirst({
+  const existingBundle = await prisma.payment.findFirst({
     where: { userId, productId: UNLIMITED_LEGACY.productId, status: 'SUCCEEDED' },
   });
-  if (activeSub) throw new ApiError(httpStatus.BAD_REQUEST, 'Unlimited Legacy subscription already active');
+  if (existingBundle) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Unlimited Legacy already active');
+  }
 
-  // Price ID is set at startup by initializeStripeProducts()
   const priceId = config.stripe.unlimitedPriceId;
   if (!priceId) {
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      'Stripe products not initialized yet — please try again in a moment',
+      'Stripe products not initialized',
     );
   }
 
@@ -167,22 +207,60 @@ const createUnlimitedLegacyCheckout = async (
     customer: customerId,
     payment_method_types: ['card'],
     mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [
+      {
+        price_data: {
+          currency: UNLIMITED_LEGACY.currency,
+          unit_amount: UNLIMITED_LEGACY.oneTimeAmount,
+          product_data: {
+            name: `${UNLIMITED_LEGACY.name} - One-time fee`,
+            description: 'One-time payment for your will',
+          },
+        },
+        quantity: 1,
+      },
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ],
     subscription_data: {
-      metadata: { userId, productId: UNLIMITED_LEGACY.productId, willId: will.id },
+      metadata: {
+        userId,
+        productId: UNLIMITED_LEGACY.productId,
+        willId: will.id,
+        bundle: 'true',
+      },
     },
-    metadata: { userId, productId: UNLIMITED_LEGACY.productId, willId: will.id },
+    metadata: { userId, bundle: 'true', willId: will.id },
     success_url: successUrl,
     cancel_url: cancelUrl,
   });
 
+  await upsertPaymentWithRetry({
+    where: { sessionId: session.id },
+    update: {},
+    create: {
+      userId,
+      stripeCustomerId: customerId,
+      amount: UNLIMITED_LEGACY.displayOneTimeAmount,
+      currency: UNLIMITED_LEGACY.currency,
+      status: 'PENDING',
+      type: 'ONE_TIME',
+      productId: UNLIMITED_LEGACY.productId,
+      sessionId: session.id,
+      metadata: { willId: will.id, checkoutUrl: session.url, bundle: 'true' },
+    },
+  });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { subscriptionType: PaymentType.SUBSCRIPTION },
+  })
   return { checkoutUrl: session.url, sessionId: session.id };
 };
 
-// ─── Subscription Management ───────────────────────────────────────────────────
-
-/** Returns tier, expiry, active status, and full payment history. */
-const getSubscriptionStatus = async (userId: string) => {
+// ─── Subscription Management ──────────────────────────────────
+export const getSubscriptionStatus = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { subscriptionTier: true, subscriptionExpiresAt: true },
@@ -190,7 +268,6 @@ const getSubscriptionStatus = async (userId: string) => {
   if (!user) throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
 
   const isExpired = user.subscriptionExpiresAt && user.subscriptionExpiresAt < new Date();
-
   const payments = await prisma.payment.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
@@ -204,10 +281,8 @@ const getSubscriptionStatus = async (userId: string) => {
   };
 };
 
-/** Schedule cancellation at end of billing period. User keeps access until then. */
-const cancelSubscription = async (userId: string) => {
+export const cancelSubscription = async (userId: string) => {
   const stripe = getStripe();
-
   const payment = await prisma.payment.findFirst({
     where: { userId, productId: UNLIMITED_LEGACY.productId, status: 'SUCCEEDED' },
   });
@@ -225,10 +300,8 @@ const cancelSubscription = async (userId: string) => {
   };
 };
 
-/** Undo a scheduled cancellation. */
-const reactivateSubscription = async (userId: string) => {
+export const reactivateSubscription = async (userId: string) => {
   const stripe = getStripe();
-
   const payment = await prisma.payment.findFirst({
     where: { userId, productId: UNLIMITED_LEGACY.productId, status: 'SUCCEEDED' },
   });
@@ -243,111 +316,112 @@ const reactivateSubscription = async (userId: string) => {
   return { message: 'Subscription reactivated successfully' };
 };
 
-// ─── Webhook Entry Point ───────────────────────────────────────────────────────
-
-/**
- * Called by stripe.webhook.ts.
- * rawBody MUST be the untouched Buffer from express.raw() — parsed JSON will
- * break Stripe's signature verification.
- */
-const handleWebhook = async (rawBody: Buffer, signature: string) => {
+// ─── Webhook Handler (Idempotent) ─────────────────────────────
+export const handleWebhook = async (rawBody: Buffer, signature: string) => {
   const stripe = getStripe();
-let event: ReturnType<typeof stripe.webhooks.constructEvent>;
+  let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);
   } catch (err: any) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Webhook signature verification failed: ${err.message}`,
-    );
+    throw new ApiError(httpStatus.BAD_REQUEST, `Webhook signature verification failed: ${err.message}`);
   }
 
-  console.log(`[Stripe] Event: ${event.type} (${event.id})`);
+  // 🔁 Idempotency: skip if already processed
+  const existingEvent = await prisma.stripeWebhookEvent.findUnique({
+    where: { eventId: event.id },
+  });
+  if (existingEvent) {
+    console.log(`[Stripe] Duplicate event ${event.id} – skipping`);
+    return { received: true, skipped: true };
+  }
+
+  console.log(`[Stripe] Processing event: ${event.type} (${event.id})`);
 
   switch (event.type) {
     case 'checkout.session.completed':
-      await onCheckoutSessionCompleted(event.data.object);
+      await onCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
       break;
     case 'payment_intent.succeeded':
-      await onPaymentIntentSucceeded(event.data.object);
+      await onPaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
       break;
     case 'payment_intent.payment_failed':
-      await onPaymentIntentFailed(event.data.object);
+      await onPaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
       break;
     case 'invoice.payment_succeeded':
-      await onInvoicePaymentSucceeded(event.data.object);
+      await onInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
       break;
     case 'invoice.payment_failed':
-      await onInvoicePaymentFailed(event.data.object);
+      await onInvoicePaymentFailed(event.data.object as Stripe.Invoice);
       break;
     case 'customer.subscription.updated':
-      await onSubscriptionUpdated(event.data.object);
+      await onSubscriptionUpdated(event.data.object as Stripe.Subscription);
       break;
     case 'customer.subscription.deleted':
-      await onSubscriptionDeleted(event.data.object);
+      await onSubscriptionDeleted(event.data.object as Stripe.Subscription);
       break;
     default:
       console.log(`[Stripe] Unhandled event type: ${event.type}`);
   }
 
+  await prisma.stripeWebhookEvent.create({ data: { eventId: event.id } });
   return { received: true };
 };
 
-// ─── Webhook Event Handlers ────────────────────────────────────────────────────
+// ─── Webhook Event Handlers ───────────────────────────────────
+const onCheckoutSessionCompleted = async (session: Stripe.Checkout.Session) => {
+  const { userId, productId, willId, bundle } = session.metadata ?? {};
+  if (!userId) return;
 
-const onCheckoutSessionCompleted = async (session:any) => {
-  const stripe = getStripe();
-  const { userId, productId, willId } = session.metadata ?? {};
-  if (!userId || !productId) return;
-
-  // ── Essential Will (one-time) ─────────────────────────────────────────────
+  // Essential Will (one‑time)
   if (session.mode === 'payment') {
     const paymentIntentId = session.payment_intent as string;
-
     await prisma.payment.updateMany({
-      where: { userId, productId, status: 'PENDING' },
+      where: { userId, productId: ESSENTIAL_WILL.productId, status: 'PENDING' },
       data: { stripePaymentIntentId: paymentIntentId, status: 'SUCCEEDED' },
     });
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + ESSENTIAL_WILL.accessDays);
-
     await prisma.user.update({
       where: { id: userId },
       data: { subscriptionTier: 'PREMIUM', subscriptionExpiresAt: expiresAt },
     });
-
     if (willId) {
       await prisma.will.update({ where: { id: willId }, data: { status: 'COMPLETED' } });
     }
-
-    console.log(
-      `[Payment] Essential Will purchased — user ${userId}, access until ${expiresAt.toISOString()}`,
-    );
+    console.log(`[Payment] Essential Will purchased — user ${userId}`);
   }
 
-  // ── Unlimited Legacy (subscription) ──────────────────────────────────────
+  // Unlimited Legacy Bundle
   if (session.mode === 'subscription') {
     const subscriptionId = session.subscription as string;
-    // const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    const subscription = await stripe.subscriptions.retrieve(
-  subscriptionId
-) as any
+    const subscription = await getStripe().subscriptions.retrieve(subscriptionId) as any;
 
-    await prisma.payment.upsert({
-      where: { stripeSubscriptionId: subscriptionId },
+    if (bundle === 'true') {
+      const paymentIntentId = session.payment_intent as string;
+      await prisma.payment.updateMany({
+        where: { sessionId: session.id, status: 'PENDING' },
+        data: { stripePaymentIntentId: paymentIntentId, status: 'SUCCEEDED' },
+      });
+    }
+
+    await upsertPaymentWithRetry({
+      where: {
+        sessionId: session.id,
+        status: { not: 'SUCCEEDED' },
+      },
       update: { status: 'SUCCEEDED' },
       create: {
         userId,
         stripeSubscriptionId: subscriptionId,
         stripeCustomerId: session.customer as string,
-        amount: UNLIMITED_LEGACY.displayAmount,
+        amount: UNLIMITED_LEGACY.displaySubscriptionAmount,
         currency: UNLIMITED_LEGACY.currency,
         status: 'SUCCEEDED',
         type: 'SUBSCRIPTION',
         productId: UNLIMITED_LEGACY.productId,
-        metadata: { sessionId: session.id, willId },
+        metadata: { sessionId: session.id, willId, bundle },
       },
     });
 
@@ -358,42 +432,32 @@ const onCheckoutSessionCompleted = async (session:any) => {
         subscriptionExpiresAt: new Date(subscription.current_period_end * 1000),
       },
     });
-
-    console.log(`[Payment] Unlimited Legacy started — user ${userId}`);
+    console.log(`[Payment] Unlimited Legacy bundle — user ${userId}`);
   }
 };
 
-const onPaymentIntentSucceeded = async (pi: any) => {
-  // Belt-and-suspenders: checkout.session.completed usually fires first
+const onPaymentIntentSucceeded = async (pi: Stripe.PaymentIntent) => {
   const { userId, productId } = pi.metadata ?? {};
   if (!userId || !productId) return;
-
   await prisma.payment.updateMany({
     where: { userId, productId, stripePaymentIntentId: pi.id },
     data: { status: 'SUCCEEDED' },
   });
 };
 
-const onPaymentIntentFailed = async (pi:any) => {
+const onPaymentIntentFailed = async (pi: Stripe.PaymentIntent) => {
   const { userId, productId } = pi.metadata ?? {};
   if (!userId || !productId) return;
-
   await prisma.payment.updateMany({
     where: { userId, productId, stripePaymentIntentId: pi.id },
     data: { status: 'FAILED' },
   });
 };
 
-const onInvoicePaymentSucceeded = async (invoice: any) => {
-  const stripe = getStripe();
+const onInvoicePaymentSucceeded = async (invoice: Stripe.Invoice) => {
   const subscriptionId = invoice.subscription as string;
   if (!subscriptionId) return;
-
-  // const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const subscription = await stripe.subscriptions.retrieve(
-  subscriptionId
-) as any
-
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId) as any;
   const userId = subscription.metadata?.userId;
   if (!userId) return;
 
@@ -404,38 +468,29 @@ const onInvoicePaymentSucceeded = async (invoice: any) => {
       subscriptionExpiresAt: new Date(subscription.current_period_end * 1000),
     },
   });
-
   await prisma.payment.updateMany({
     where: { userId, stripeSubscriptionId: subscriptionId },
     data: { status: 'SUCCEEDED' },
   });
-
   console.log(`[Payment] Subscription renewed — user ${userId}`);
 };
 
-const onInvoicePaymentFailed = async (invoice: any) => {
-  const stripe = getStripe();
+const onInvoicePaymentFailed = async (invoice: Stripe.Invoice) => {
   const subscriptionId = invoice.subscription as string;
   if (!subscriptionId) return;
-
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
   const userId = subscription.metadata?.userId;
   if (!userId) return;
-
-  // Don't downgrade yet — Stripe retries automatically.
-  // Downgrade happens in onSubscriptionDeleted after all retries are exhausted.
   await prisma.payment.updateMany({
     where: { userId, stripeSubscriptionId: subscriptionId },
     data: { status: 'FAILED' },
   });
-
   console.log(`[Payment] Invoice failed — user ${userId} (Stripe will retry)`);
 };
 
-const onSubscriptionUpdated = async (subscription: any) => {
+const onSubscriptionUpdated = async (subscription: Stripe.Subscription) => {
   const userId = subscription.metadata?.userId;
   if (!userId) return;
-
   if (subscription.status === 'active') {
     await prisma.user.update({
       where: { id: userId },
@@ -445,38 +500,21 @@ const onSubscriptionUpdated = async (subscription: any) => {
       },
     });
   }
-
   if (subscription.cancel_at_period_end) {
-    console.log(
-      `[Payment] Cancellation scheduled — user ${userId}, ends ${new Date(subscription.cancel_at! * 1000).toISOString()}`,
-    );
+    console.log(`[Payment] Cancellation scheduled — user ${userId}`);
   }
 };
 
-const onSubscriptionDeleted = async (subscription:any) => {
+const onSubscriptionDeleted = async (subscription: Stripe.Subscription) => {
   const userId = subscription.metadata?.userId;
   if (!userId) return;
-
   await prisma.user.update({
     where: { id: userId },
     data: { subscriptionTier: 'FREE', subscriptionExpiresAt: null },
   });
-
   await prisma.payment.updateMany({
     where: { userId, stripeSubscriptionId: subscription.id },
     data: { status: 'REFUNDED' },
   });
-
   console.log(`[Payment] Subscription deleted — user ${userId} downgraded to FREE`);
-};
-
-// ─── Exports ───────────────────────────────────────────────────────────────────
-
-export const PaymentService = {
-  createEssentialWillCheckout,
-  createUnlimitedLegacyCheckout,
-  getSubscriptionStatus,
-  cancelSubscription,
-  reactivateSubscription,
-  handleWebhook,
 };

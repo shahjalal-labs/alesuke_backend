@@ -113,6 +113,7 @@ model User {
 
   subscriptionTier      SubscriptionTier @default(FREE)
   subscriptionExpiresAt DateTime?
+  subscriptionType      PaymentType?
 
   people    People[]
   gifts     Gift[]

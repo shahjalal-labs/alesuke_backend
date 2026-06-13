@@ -13,19 +13,22 @@ enum PaymentType {
 }
 
 model Payment {
-  id               String        @id @default(auto()) @map("_id") @db.ObjectId
-  userId           String        @db.ObjectId
-  stripePaymentIntentId String?   @unique
-  stripeSubscriptionId String?    @unique
-  stripeCustomerId  String?
-  amount           Float
-  currency         String        @default("usd")
-  status           PaymentStatus @default(PENDING)
-  type             PaymentType
-  productId        String        // "essential_will" or "unlimited_legacy"
-  metadata         Json?         // extra info like willId
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                    String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String        @db.ObjectId
+  stripePaymentIntentId String?      
+  stripeSubscriptionId  String?      
+  stripeCustomerId      String?
+  amount                Float
+  currency              String        @default("usd")
+  status                PaymentStatus @default(PENDING)
+  sessionId             String?       @unique // <-- add this
+  type                  PaymentType
+  productId             String // "essential_will" or "unlimited_legacy"
+  metadata              Json? // extra info like willId
+  expiresAt             DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
 
   user User @relation(fields: [userId], references: [id])
 
@@ -40,4 +43,10 @@ model storePaymentInfo {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model StripeWebhookEvent {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId   String   @unique
+  createdAt DateTime @default(now())
 }

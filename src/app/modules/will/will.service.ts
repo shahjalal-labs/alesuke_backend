@@ -12,6 +12,7 @@ import {
   IUpdatePetCaretaker,
 } from './will.interface';
 import { calculateAutoPercentages } from '../../utils/calculateAutoPercentages';
+import assert from 'assert';
 
 // ========== WILL SERVICES ==========
 
@@ -950,6 +951,8 @@ const getDashboard = async (userId: string) => {
         include: {
           gift: {
             include: {
+              property: true,
+              asset: true,
               recipients: { include: { recipient: true } }
             }
           }
@@ -963,7 +966,6 @@ const getDashboard = async (userId: string) => {
       }
     }
   });
-
   // 3. Assets grouped by type
   // const allAssets = await prisma.asset.findMany({ where: { userId } });
   // const financialAssets = allAssets.filter(a => 
@@ -1055,7 +1057,10 @@ const getDashboard = async (userId: string) => {
       recipientName: wg.gift.recipients[0]?.recipient.fullName,
       giftType: wg.gift.giftType,
       amount: wg.gift.amount,
-      description: wg.gift.description
+      description: wg.gift.description,
+      itemName: wg.gift.itemName,
+      asset: wg.gift.asset,
+      property: wg.gift.property
     })) || [],
     petCaretakers: will?.petCaretakers || [],
     assets: {

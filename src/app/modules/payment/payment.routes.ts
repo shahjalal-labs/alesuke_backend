@@ -6,22 +6,14 @@ import { paymentValidation } from './payment.validation';
 
 const router = express.Router();
 
-// ─── Stripe Webhook ───────────────────────────────────────────────────────────
-// CRITICAL: This route must use express.raw() to receive the raw body.
-// Stripe signature verification will fail if the body is parsed as JSON first.
-// Register this route BEFORE any global express.json() middleware in app.ts.
+// Webhook – must be raw body
 router.post(
   '/webhook',
   express.raw({ type: 'application/json' }),
-  PaymentController.stripeWebhook,
+  PaymentController.stripeWebhook, // you need to add this controller method (optional – see note)
 );
 
-// ─── Checkout ─────────────────────────────────────────────────────────────────
-
-/** POST /api/v1/payments/checkout/essential-will
- * Body: { successUrl: string, cancelUrl: string }
- * Returns: { checkoutUrl: string, sessionId: string }
- */
+// Checkout endpoints
 router.post(
   '/checkout/essential-will',
   auth(),
@@ -29,10 +21,6 @@ router.post(
   PaymentController.checkoutEssentialWill,
 );
 
-/** POST /api/v1/payments/checkout/unlimited-legacy
- * Body: { successUrl: string, cancelUrl: string }
- * Returns: { checkoutUrl: string, sessionId: string }
- */
 router.post(
   '/checkout/unlimited-legacy',
   auth(),
@@ -40,21 +28,11 @@ router.post(
   PaymentController.checkoutUnlimitedLegacy,
 );
 
-// ─── Subscription Management ──────────────────────────────────────────────────
 
-/** GET /api/v1/payments/subscription
- * Returns current tier, expiry, and payment history.
- */
+
+// Subscription management
 router.get('/subscription', auth(), PaymentController.getSubscriptionStatus);
-
-/** DELETE /api/v1/payments/subscription
- * Schedules cancellation at period end.
- */
 router.delete('/subscription', auth(), PaymentController.cancelSubscription);
-
-/** POST /api/v1/payments/subscription/reactivate
- * Undoes a scheduled cancellation.
- */
 router.post('/subscription/reactivate', auth(), PaymentController.reactivateSubscription);
 
 export const PaymentRoutes = router;

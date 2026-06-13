@@ -2,17 +2,18 @@ import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
-import { PaymentService } from './payment.service';
-
-// ─── Checkout ─────────────────────────────────────────────────────────────────
+import {
+  createEssentialWillCheckout,
+  createUnlimitedLegacyCheckout,
+  getSubscriptionStatus,
+  cancelSubscription,
+  reactivateSubscription,
+  handleWebhook,
+} from './payment.service';
 
 const checkoutEssentialWill = catchAsync(async (req: Request, res: Response) => {
   const { successUrl, cancelUrl } = req.body;
-  const result = await PaymentService.createEssentialWillCheckout(
-    req.user.id,
-    successUrl,
-    cancelUrl,
-  );
+  const result = await createEssentialWillCheckout(req.user.id, successUrl, cancelUrl);
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -23,11 +24,7 @@ const checkoutEssentialWill = catchAsync(async (req: Request, res: Response) => 
 
 const checkoutUnlimitedLegacy = catchAsync(async (req: Request, res: Response) => {
   const { successUrl, cancelUrl } = req.body;
-  const result = await PaymentService.createUnlimitedLegacyCheckout(
-    req.user.id,
-    successUrl,
-    cancelUrl,
-  );
+  const result = await createUnlimitedLegacyCheckout(req.user.id, successUrl, cancelUrl);
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -36,10 +33,9 @@ const checkoutUnlimitedLegacy = catchAsync(async (req: Request, res: Response) =
   });
 });
 
-// ─── Subscription Management ──────────────────────────────────────────────────
 
-const getSubscriptionStatus = catchAsync(async (req: Request, res: Response) => {
-  const result = await PaymentService.getSubscriptionStatus(req.user.id);
+const getStatus = catchAsync(async (req: Request, res: Response) => {
+  const result = await getSubscriptionStatus(req.user.id);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -48,8 +44,8 @@ const getSubscriptionStatus = catchAsync(async (req: Request, res: Response) => 
   });
 });
 
-const cancelSubscription = catchAsync(async (req: Request, res: Response) => {
-  const result = await PaymentService.cancelSubscription(req.user.id);
+const cancel = catchAsync(async (req: Request, res: Response) => {
+  const result = await cancelSubscription(req.user.id);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -58,8 +54,8 @@ const cancelSubscription = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const reactivateSubscription = catchAsync(async (req: Request, res: Response) => {
-  const result = await PaymentService.reactivateSubscription(req.user.id);
+const reactivate = catchAsync(async (req: Request, res: Response) => {
+  const result = await reactivateSubscription(req.user.id);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -68,29 +64,21 @@ const reactivateSubscription = catchAsync(async (req: Request, res: Response) =>
   });
 });
 
-// ─── Stripe Webhook ───────────────────────────────────────────────────────────
-
-/**
- * This route MUST receive the raw body — see payment.routes.ts.
- * Do NOT run express.json() on this endpoint.
- */
 const stripeWebhook = catchAsync(async (req: Request, res: Response) => {
   const signature = req.headers['stripe-signature'] as string;
-
   if (!signature) {
     res.status(httpStatus.BAD_REQUEST).json({ message: 'Missing stripe-signature header' });
     return;
   }
-
-  const result = await PaymentService.handleWebhook(req.body as Buffer, signature);
+  const result = await handleWebhook(req.body, signature);
   res.status(httpStatus.OK).json(result);
 });
 
 export const PaymentController = {
   checkoutEssentialWill,
   checkoutUnlimitedLegacy,
-  getSubscriptionStatus,
-  cancelSubscription,
-  reactivateSubscription,
+  getSubscriptionStatus: getStatus,
+  cancelSubscription: cancel,
+  reactivateSubscription: reactivate,
   stripeWebhook,
 };

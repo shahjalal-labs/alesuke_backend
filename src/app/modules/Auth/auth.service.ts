@@ -422,6 +422,9 @@ const getMe = async (id: string) => {
       payments: true,
       haveChildren: true,
       havePets: true,
+      subscriptionTier: true,
+      subscriptionExpiresAt: true,
+      subscriptionType: true,
     }
   });
 
