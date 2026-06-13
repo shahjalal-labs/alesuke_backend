@@ -69,7 +69,7 @@ import fs from "fs";
 import ApiError from "../errors/ApiErrors";
  
 // MinIO config
-const MINIO_CONFIG = {
+export const MINIO_CONFIG = {
   endpoint: "https://api.zenexcloud.com:443", // add the correct API port
   region: "us-east-1",
   credentials: {
