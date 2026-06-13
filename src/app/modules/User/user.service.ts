@@ -4,6 +4,7 @@ import ApiError from '../../../errors/ApiErrors';
 import prisma from '../../../shared/prisma';
 import { IAddPerson, IUpdatePerson, IUpdateProfile } from './user.interface';
 import uploadToDigitalOcean from '../../../helpars/uploadToDigitalOcean';
+import { deleteFromDigitalOcean } from '../../../helpars/deleteFromDigitalOccean';
 
 // UPDATE USER PROFILE
 const updateProfile = async (userId: string, payload: IUpdateProfile, files: Record<string, Express.Multer.File[]>) => {
@@ -15,10 +16,11 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
   // Handle profile image upload
   const profileImageFile = files?.profileImage?.[0];
   let newProfileImageUrl: string | undefined;
-
+  const profileImage = user.profileImage;
   if (profileImageFile) {
     try {
       newProfileImageUrl = await uploadToDigitalOcean(profileImageFile);
+     
     } catch (error) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Profile image upload failed');
     }
@@ -48,7 +50,9 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
       havePets: true,
     },
   });
-
+if (newProfileImageUrl && profileImage) {
+  await deleteFromDigitalOcean(profileImage);
+}
   return updatedUser;
 };
 
