@@ -103,13 +103,13 @@ const getAllSubscriptionsFromDB = async (
   limit: number = 20,
 ) => {
   const totalSubscriptions = await prisma.payment.count();
-  const totalEssentialWill = await prisma.payment.aggregate({
+  const totalEssentialWill = await prisma.payment.count({
     where: { productId: 'essential_will' },
-    _sum: { amount: true },
+   
   });
-  const totalUnlimitedLegacy = await prisma.payment.aggregate({
+  const totalUnlimitedLegacy = await prisma.payment.count({
     where: { productId: 'unlimited_legacy' },
-    _sum: { amount: true },
+  
   });
 
   const totalPages = Math.ceil(totalSubscriptions / limit);
@@ -139,8 +139,8 @@ const getAllSubscriptionsFromDB = async (
   return {
     meta: {
       totalSubscriptions,
-      totalEssentialWill: totalEssentialWill._sum.amount || 0,
-      totalUnlimitedLegacy: totalUnlimitedLegacy._sum.amount || 0,
+      totalEssentialWill,
+      totalUnlimitedLegacy,
       totalPages,
       currentPage: page,
     },
