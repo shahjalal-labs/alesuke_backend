@@ -1043,7 +1043,7 @@ const getDashboard = async (userId: string) => {
   return {
     id: will?.id || '',
     estateDistributionType: will?.estateDistributionType,
-    user: { name: user?.fullName, profileImage: user?.profileImage, maritalStatus: user?.maritalStatus },
+    user: { name: user?.fullName, profileImage: user?.profileImage, maritalStatus: user?.maritalStatus, nid: user?.nid },
     family: user?.maritalStatus === "SINGLE"
       ?
       codeFamily.filter(f => f.relationType !== 'SPOUSE' && f.relationType !== 'PARTNER')
