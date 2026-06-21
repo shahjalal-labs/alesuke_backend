@@ -90,16 +90,17 @@ enum Region {
 model User {
   id                 String         @id @default(auto()) @map("_id") @db.ObjectId
   fullName           String?
-  nickname           String?        
+  nickname           String?
   email              String?        @unique
   phoneNumber        String?
+  nid                String?
   password           String?
   profileImage       String?
   region             Region?
   religion           Religion?
   maritalStatus      MaritalStatus?
-  haveChildren        Boolean?       @default(false)
-  havePets            Boolean?       @default(false)
+  haveChildren       Boolean?       @default(false)
+  havePets           Boolean?       @default(false)
   role               UserRole       @default(USER)
   status             UserStatus     @default(ACTIVE)
   logInProcess       LogInProcess
@@ -122,11 +123,11 @@ model User {
   addresses Address[]
   assets    Asset[]
 
-  wills      Will[]
-  properties Property[]
-  loans      Loan[]
-  advisors   Advisor[]
-  payments   Payment[]
+  wills             Will[]
+  properties        Property[]
+  loans             Loan[]
+  advisors          Advisor[]
+  payments          Payment[]
   userDigitalAssets UserDigitalAssets[]
 
   createdAt             DateTime               @default(now())
@@ -201,15 +202,15 @@ model People {
 }
 
 model SelectedPeopleToShow {
-  id           String       @id @default(auto()) @map("_id") @db.ObjectId
-  userId       String       @db.ObjectId
-  peopleId     String       @db.ObjectId
-  user         User         @relation(fields: [userId], references: [id])
-  people       People       @relation(fields: [peopleId], references: [id], onDelete: Cascade)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  peopleId  String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  people    People   @relation(fields: [peopleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([peopleId, userId])
   @@index([userId])
   @@index([peopleId])
-  @@unique([peopleId, userId])
 }

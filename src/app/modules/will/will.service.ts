@@ -923,7 +923,7 @@ const getDashboard = async (userId: string) => {
   // 1. Get user's basic info + family members
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { fullName: true, profileImage: true, maritalStatus: true, haveChildren: true, havePets: true },
+    select: { fullName: true, profileImage: true, maritalStatus: true, haveChildren: true, havePets: true, nid: true },
   });
 
   const family = await prisma.people.findMany({

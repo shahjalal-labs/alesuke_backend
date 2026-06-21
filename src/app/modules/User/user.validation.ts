@@ -5,6 +5,7 @@ const updateProfileValidationSchema = z.object({
   body: z.object({
     fullName: z.string().min(1, "Full name is required").optional(),
     nickname: z.string().min(1, "Nickname is required").optional(),
+    nid: z.string().optional(),
     phoneNumber: z.string().optional(),
     region: z.nativeEnum(Region).optional(),
     religion: z.nativeEnum(Religion).optional(),

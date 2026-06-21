@@ -34,6 +34,7 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
       havePets: payload.havePets !== undefined ? payload.havePets === 'true' ? true : false : user.havePets,
       profileImage: newProfileImageUrl || user.profileImage,
       isProfileCompleted: true,
+      nid: payload.nid
     },
     select: {
       id: true,
@@ -48,6 +49,7 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
       isProfileCompleted: true,
       haveChildren: true,
       havePets: true,
+      nid: true
     },
   });
 if (newProfileImageUrl && profileImage) {

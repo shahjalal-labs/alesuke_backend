@@ -10,6 +10,7 @@ export interface IUpdateProfile {
   havePets?: string | boolean;
   maritalStatus?: MaritalStatus;
   profileImage?: string;
+  nid?: string
 }
 
 export interface IAddPerson {

@@ -425,6 +425,7 @@ const getMe = async (id: string) => {
       subscriptionTier: true,
       subscriptionExpiresAt: true,
       subscriptionType: true,
+      nid: true
     }
   });
 
