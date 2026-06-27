@@ -1060,6 +1060,7 @@ const getDashboard = async (userId: string) => {
       description: wg.gift.description,
       itemName: wg.gift.itemName,
       asset: wg.gift.asset,
+      personalMessage: wg.gift.personalMessage,
       property: wg.gift.property
     })) || [],
     petCaretakers: will?.petCaretakers || [],
