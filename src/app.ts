@@ -33,11 +33,8 @@ app.use(
     origin: [
       'http://localhost:3001',
       'http://localhost:3000',
-      'http://localhost:65347',
-      'http://localhost:53284',
-      'http://206.162.244.142',
-      'http://206.162.244.144:3181',
-      'http://206.162.244.144:3190',
+      'https://willway.sg',
+      'https://admin.willway.sg',
       'https://will-way.smtsigma.com'
     ],
     credentials: true,
