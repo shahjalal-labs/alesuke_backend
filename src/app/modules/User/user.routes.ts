@@ -12,7 +12,7 @@ const router = express.Router();
 // Update user profile (religion, name, nickname, marital status, etc.)
 router.put(
   "/",
-  fileUploader.userImages,
+  fileUploader.profileImage, // Use the fileUploader middleware to handle profile image upload
   parseBody,
   auth(),
   validateRequest(profileValidation.updateProfileValidationSchema),

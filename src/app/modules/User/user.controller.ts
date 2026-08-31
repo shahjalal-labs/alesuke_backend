@@ -6,8 +6,8 @@ import { RelationType } from '@prisma/client';
 import { ProfileServices } from './user.service';
 
 const updateProfile = catchAsync(async (req: Request, res: Response) => {
-  const files = req.files as Record<string, Express.Multer.File[]>;
-  const result = await ProfileServices.updateProfile(req.user.id, req.body, files);
+  const file = req.file; 
+  const result = await ProfileServices.updateProfile(req.user.id, req.body, file);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

@@ -5,24 +5,35 @@ import prisma from '../../../shared/prisma';
 import { IAddPerson, IUpdatePerson, IUpdateProfile } from './user.interface';
 import uploadToDigitalOcean from '../../../helpars/uploadToDigitalOcean';
 import { deleteFromDigitalOcean } from '../../../helpars/deleteFromDigitalOccean';
+import { uploadInSpace } from '../../../helpars/uploadinCloudinary';
 
 // UPDATE USER PROFILE
-const updateProfile = async (userId: string, payload: IUpdateProfile, files: Record<string, Express.Multer.File[]>) => {
+const updateProfile = async (
+  userId: string,
+  payload: IUpdateProfile,
+  file: Express.Multer.File | undefined
+) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
   // Handle profile image upload
-  const profileImageFile = files?.profileImage?.[0];
+
   let newProfileImageUrl: string | undefined;
   const profileImage = user.profileImage;
-  if (profileImageFile) {
+
+  if (file) {
     try {
-      newProfileImageUrl = await uploadToDigitalOcean(profileImageFile);
-     
+      newProfileImageUrl = await uploadInSpace(
+        file,
+        'users/profileImage',
+      );
     } catch (error) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Profile image upload failed');
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        'Profile image upload failed',
+      );
     }
   }
 
@@ -30,11 +41,21 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
     where: { id: userId },
     data: {
       ...payload,
-      haveChildren: payload.haveChildren !== undefined ? payload.haveChildren === 'true' ? true : false : user.haveChildren,
-      havePets: payload.havePets !== undefined ? payload.havePets === 'true' ? true : false : user.havePets,
+      haveChildren:
+        payload.haveChildren !== undefined
+          ? payload.haveChildren === 'true'
+            ? true
+            : false
+          : user.haveChildren,
+      havePets:
+        payload.havePets !== undefined
+          ? payload.havePets === 'true'
+            ? true
+            : false
+          : user.havePets,
       profileImage: newProfileImageUrl || user.profileImage,
       isProfileCompleted: true,
-      nid: payload.nid
+      nid: payload.nid,
     },
     select: {
       id: true,
@@ -49,17 +70,23 @@ const updateProfile = async (userId: string, payload: IUpdateProfile, files: Rec
       isProfileCompleted: true,
       haveChildren: true,
       havePets: true,
-      nid: true
+      nid: true,
     },
   });
-if (newProfileImageUrl && profileImage) {
-  await deleteFromDigitalOcean(profileImage);
-}
+  if (newProfileImageUrl && profileImage) {
+    await deleteFromDigitalOcean(profileImage);
+  }
   return updatedUser;
 };
 
 // ADD ADDRESS
-const addAddress = async (userId: string, country: string, streetAddress: string, unitNumber: string, postCode: string) => {
+const addAddress = async (
+  userId: string,
+  country: string,
+  streetAddress: string,
+  unitNumber: string,
+  postCode: string,
+) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
@@ -79,7 +106,14 @@ const addAddress = async (userId: string, country: string, streetAddress: string
 };
 
 // UPDATE ADDRESS
-const updateAddress = async (userId: string, addressId: string, country: string, streetAddress: string, unitNumber: string, postCode: string) => {
+const updateAddress = async (
+  userId: string,
+  addressId: string,
+  country: string,
+  streetAddress: string,
+  unitNumber: string,
+  postCode: string,
+) => {
   const address = await prisma.address.findFirst({
     where: {
       id: addressId,
@@ -102,7 +136,6 @@ const updateAddress = async (userId: string, addressId: string, country: string,
 
   return updatedAddress;
 };
-
 
 // GET USER PROFILE
 const getProfile = async (userId: string) => {
@@ -155,7 +188,6 @@ const getProfile = async (userId: string) => {
           recipients: true,
         },
       },
-
     },
   });
 
@@ -179,18 +211,20 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
     await prisma.will.create({
       data: {
         userId,
-        status: WillStatus.DRAFT
+        status: WillStatus.DRAFT,
       },
     });
   }
 
-  if (payload.relationType === "SPOUSE" || payload.relationType === "PARTNER") {
+  if (payload.relationType === 'SPOUSE' || payload.relationType === 'PARTNER') {
     await prisma.user.update({
       where: { id: userId },
-      data: { maritalStatus: payload.relationType === "SPOUSE" ? "MARRIED" : "LONG_TERM_PARTNER" },
+      data: {
+        maritalStatus:
+          payload.relationType === 'SPOUSE' ? 'MARRIED' : 'LONG_TERM_PARTNER',
+      },
     });
   }
-
 
   // Prepare data object with required fields
   const data: any = {
@@ -204,7 +238,10 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
     data.email = payload.email;
   }
 
-  if (payload.relationWithUser !== undefined && payload.relationWithUser !== null) {
+  if (
+    payload.relationWithUser !== undefined &&
+    payload.relationWithUser !== null
+  ) {
     data.relationWithUser = payload.relationWithUser;
   }
 
@@ -213,11 +250,17 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
   }
 
   // Handle government ID fields
-  if (payload.typeOfIdentifier !== undefined && payload.typeOfIdentifier !== null) {
+  if (
+    payload.typeOfIdentifier !== undefined &&
+    payload.typeOfIdentifier !== null
+  ) {
     data.typeOfIdentifier = payload.typeOfIdentifier;
   }
 
-  if (payload.identifierValue !== undefined && payload.identifierValue !== null) {
+  if (
+    payload.identifierValue !== undefined &&
+    payload.identifierValue !== null
+  ) {
     data.identifierValue = payload.identifierValue;
   }
 
@@ -245,38 +288,40 @@ const addPerson = async (userId: string, payload: IAddPerson) => {
   return person;
 };
 
-
-
-
 // GET ALL PEOPLE FOR USER
 const getPeople = async (userId: string) => {
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { fullName: true, profileImage: true, maritalStatus: true, haveChildren: true, havePets: true },
+    select: {
+      fullName: true,
+      profileImage: true,
+      maritalStatus: true,
+      haveChildren: true,
+      havePets: true,
+    },
   });
 
-  const hasChildren = user?.haveChildren
-  const hasPets = user?.havePets
+  const hasChildren = user?.haveChildren;
+  const hasPets = user?.havePets;
   const allowedRelations = [
-    "FRIEND",
-    "SISTER",
-    "BROTHER",
-    "COUSIN",
-    "FATHER",
-    "MOTHER",
-    "SIBLING",
-    "GRANDPARENT",
-    "PARENT",
-    "NEPHEW",
-    "OTHER",
+    'FRIEND',
+    'SISTER',
+    'BROTHER',
+    'COUSIN',
+    'FATHER',
+    'MOTHER',
+    'SIBLING',
+    'GRANDPARENT',
+    'PARENT',
+    'NEPHEW',
+    'OTHER',
   ];
 
-  if (user?.maritalStatus === "MARRIED") {
+  if (user?.maritalStatus === 'MARRIED') {
     allowedRelations.push('SPOUSE');
   }
 
-  if (user?.maritalStatus === "LONG_TERM_PARTNER") {
+  if (user?.maritalStatus === 'LONG_TERM_PARTNER') {
     allowedRelations.push('PARTNER');
   }
 
@@ -290,15 +335,12 @@ const getPeople = async (userId: string) => {
 
   const family = await prisma.people.findMany({
     where: { userId },
-    orderBy: { createdAt: 'asc' }
+    orderBy: { createdAt: 'asc' },
   });
 
   const codeFamily = family.filter(f =>
-    allowedRelations.includes(f.relationType)
+    allowedRelations.includes(f.relationType),
   );
-
-
-
 
   // const people = await prisma.people.findMany({
   //   where: { userId },
@@ -322,7 +364,11 @@ const getPeopleByType = async (userId: string, relationType: RelationType) => {
 };
 
 // UPDATE PERSON
-const updatePerson = async (userId: string, personId: string, payload: IUpdatePerson) => {
+const updatePerson = async (
+  userId: string,
+  personId: string,
+  payload: IUpdatePerson,
+) => {
   const person = await prisma.people.findFirst({
     where: {
       id: personId,
@@ -395,16 +441,20 @@ const addSelectedPeople = async (userId: string, payload: any) => {
         select: {
           id: true,
           fullName: true,
-          relationType: true
-        }
-      }
-    }
+          relationType: true,
+        },
+      },
+    },
   });
 
   return selectedPeople;
 };
 
-const updateSelectedPeople = async (userId: string, id: string, payload: any) => {
+const updateSelectedPeople = async (
+  userId: string,
+  id: string,
+  payload: any,
+) => {
   const people = await prisma.people.findUnique({
     where: { id: payload.peopleId },
   });
@@ -425,16 +475,14 @@ const updateSelectedPeople = async (userId: string, id: string, payload: any) =>
         select: {
           id: true,
           fullName: true,
-          relationType: true
-        }
-      }
-    }
+          relationType: true,
+        },
+      },
+    },
   });
 
   return selectedPeople;
 };
-
-
 
 const getSelectedPeopleToShow = async (userId: string) => {
   const people = await prisma.selectedPeopleToShow.findMany({
@@ -446,17 +494,13 @@ const getSelectedPeopleToShow = async (userId: string) => {
         select: {
           id: true,
           fullName: true,
-          relationType: true
-        }
-      }
-    }
-  },
-
-
-  );
+          relationType: true,
+        },
+      },
+    },
+  });
   return people;
 };
-
 
 export const ProfileServices = {
   updateProfile,
@@ -470,5 +514,5 @@ export const ProfileServices = {
   deletePerson,
   addSelectedPeople,
   updateSelectedPeople,
-  getSelectedPeopleToShow
+  getSelectedPeopleToShow,
 };
