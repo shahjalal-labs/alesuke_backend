@@ -24,12 +24,14 @@ const updateProfile = async (
   const profileImage = user.profileImage;
 
   if (file) {
+
     try {
       newProfileImageUrl = await uploadInSpace(
         file,
         'users/profileImage',
       );
     } catch (error) {
+      
       throw new ApiError(
         httpStatus.INTERNAL_SERVER_ERROR,
         'Profile image upload failed',

@@ -3,8 +3,8 @@ import auth from "../../middlewares/auth";
 import validateRequest from "../../middlewares/validateRequest";
 import { profileValidation } from "./user.validation";
 import { ProfileController } from "./user.controller";
-import { fileUploader } from "../../../helpars/fileUploader";
 import { parseBody } from "../../middlewares/parseBody";
+import { fileUploader2 } from "../../../helpars/fileUploadDoulbe";
 
 
 const router = express.Router();
@@ -12,7 +12,7 @@ const router = express.Router();
 // Update user profile (religion, name, nickname, marital status, etc.)
 router.put(
   "/",
-  fileUploader.profileImage, // Use the fileUploader middleware to handle profile image upload
+  fileUploader2.profileImage, // Use the fileUploader middleware to handle profile image upload
   parseBody,
   auth(),
   validateRequest(profileValidation.updateProfileValidationSchema),
