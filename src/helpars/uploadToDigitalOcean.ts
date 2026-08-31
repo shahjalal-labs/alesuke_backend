@@ -70,11 +70,11 @@ import ApiError from "../errors/ApiErrors";
  
 // MinIO config
 export const MINIO_CONFIG = {
-  endpoint: "https://api.zenexcloud.com:443", // add the correct API port
-  region: "us-east-1",
+  endpoint: "https://s3.zenex.cloud", // add the correct API port
+  region: "s3v4",
   credentials: {
-    accessKeyId: "Be7vSXLGn1EuMzy55jLO",
-    secretAccessKey: "Gw2pW1gqVAG0GH8SXzrRJXi1036IMv5dBdgcwJme",
+    accessKeyId: "6Q2Clv1Pih3UMBMIF1Ot",
+    secretAccessKey: "nYF3ScyoiVnXzzfgK66m0SpUqwCdUIl1N6zhj71j",
   },
   bucketName: "emdadullah",
   apiVersion: "s3v4",
@@ -82,11 +82,11 @@ export const MINIO_CONFIG = {
  
  
 const s3Config: S3ClientConfig = {
-  endpoint: MINIO_CONFIG.endpoint || "https://api.zenexcloud.com:443",
-  region: MINIO_CONFIG.region || "us-east-1",
+  endpoint: MINIO_CONFIG.endpoint || "https://s3.zenex.cloud",
+  region: MINIO_CONFIG.region || "s3v4",
   credentials: MINIO_CONFIG.credentials || {
-    accessKeyId: "Be7vSXLGn1EuMzy55jLO",
-    secretAccessKey: "Gw2pW1gqVAG0GH8SXzrRJXi1036IMv5dBdgcwJme",
+    accessKeyId: "6Q2Clv1Pih3UMBMIF1Ot",
+    secretAccessKey: "nYF3ScyoiVnXzzfgK66m0SpUqwCdUIl1N6zhj71j",
   },
   forcePathStyle: true, // must be true for MinIO
 };
