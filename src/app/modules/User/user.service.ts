@@ -1,10 +1,8 @@
-import { People, RelationType, WillStatus } from '@prisma/client';
+import { RelationType, WillStatus } from '@prisma/client';
 import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiErrors';
 import prisma from '../../../shared/prisma';
 import { IAddPerson, IUpdatePerson, IUpdateProfile } from './user.interface';
-import uploadToDigitalOcean from '../../../helpars/uploadToDigitalOcean';
-import { deleteFromDigitalOcean } from '../../../helpars/deleteFromDigitalOccean';
 import { uploadInSpace } from '../../../helpars/uploadinCloudinary';
 
 // UPDATE USER PROFILE
@@ -75,9 +73,7 @@ const updateProfile = async (
       nid: true,
     },
   });
-  if (newProfileImageUrl && profileImage) {
-    await deleteFromDigitalOcean(profileImage);
-  }
+ 
   return updatedUser;
 };
 
