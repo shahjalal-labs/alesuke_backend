@@ -27,7 +27,6 @@ app.use(
   WebhookRoutes,
 );
 
-
 app.use(
   cors({
     origin: [
@@ -35,7 +34,7 @@ app.use(
       'http://localhost:3000',
       'https://willway.sg',
       'https://admin.willway.sg',
-      'https://will-way.smtsigma.com'
+      'https://will-way.smtsigma.com',
     ],
     credentials: true,
   }),
@@ -85,9 +84,7 @@ app.use('/api/v1', router);
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
 createBullBoard({
-  queues: [
-    new BullMQAdapter(messagePersistenceQueue),
-  ],
+  queues: [new BullMQAdapter(messagePersistenceQueue)],
   serverAdapter,
 });
 
