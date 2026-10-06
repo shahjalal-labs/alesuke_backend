@@ -54,7 +54,7 @@ app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
 app.get('/', (req: Request, res: Response) => {
   res.send({
-    Message: 'The server is running. . .',
+    Message: 'The server is running 2. . .',
   });
 });
 // Run every hour
